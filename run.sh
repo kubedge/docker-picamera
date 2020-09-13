@@ -5,4 +5,4 @@ docker run -d --restart=always \
   -p 8000:8000 \
   -e AUTH_USERNAME=pi \
   -e AUTH_PASSWORD=picamera \
-  pschmitt/picamera
+  kubedge/picamera

@@ -2,4 +2,4 @@
 
 cd "$(readlink -f "$(dirname "$0")")" || exit 9
 
-docker build -t pschmitt/picamera .
+docker build -t kubedge/picamera .
