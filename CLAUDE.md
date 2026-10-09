@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-<!-- Filling this in: CLAUDE-TEMPLATE-NOTES.md, beside this file. Delete the notes when done. -->
-
 Orients a Claude session at the start of every task in this repo, and carries only what is
 true for **every** task — depth lives in the skill named below and loads on demand. The other
 two owners are [`README.md`](README.md) (a human at a shell: install, run, configuration,
@@ -11,19 +9,15 @@ code: modules, boundaries, invariants); what was decided and why lives in
 you need when you need it.
 Per-model advice, when the model changes: [`docs/MODEL-ADVICE.md`](docs/MODEL-ADVICE.md).
 
-> **Just bootstrapped via `/alemax:new-project`?** Run `/opsx:propose` to spec out your first change.
-> *(This nudge can be removed once you've made your first commit beyond bootstrap.)*
-
 ## 1. What this project is
 
-<TBD>
+An authenticated MJPEG stream of a Raspberry Pi camera, shipped as the arm64 image
+`kubedge/picamera` and the Helm chart `charts/picamera` for Kubernetes camera nodes. It
+streams and reports health; it does not record, transcode, or serve more than one camera.
 
-<two sentences: what it produces, for whom, and what it deliberately does not do>
-
-- **Stack:** python · **Run:** `<the one command — e.g. uv run docker-picamera …>` ·
+- **Stack:** python · **Run:** `AUTH_PASSWORD=… ./run.sh` on a Pi; `uv run pytest` anywhere ·
   **Layout and invariants:** `architecture.md` — read it before adding a module, a stage, or a
   dependency between packages; do not re-derive it from the tree, and do not summarise it here.
-- <domain doc, if any> — read it before <moment> *(e.g. `MODEL.md` before writing a record; delete this line if there is none)*
 
 ## 2. Where the data lives — and who owns it
 
@@ -33,33 +27,28 @@ if a variable is unset, **stop and ask** — do not guess a location and write t
 | tree | resolve it from | nature |
 | --- | --- | --- |
 | **code** | the session's repo root | private, on GitHub. **Sole owner** — refactor, rename, delete freely |
-| **data** | `<PROJECT>_<TIER>_DIR` — one variable per tier, catalogued in README § Configuration | private, local. **Sole owner** — <rebuild cost per tier> |
-| **shared** | `<SHARED_ROOT>/docker-picamera/` | private, and **shared** — write **only** inside our own folder; outside it, report, never fix |
+
+No data tree and no shared folder: the service holds frames in memory only.
 
 ## 3. The skills this project built
 
-Everything this project does is driven through its own skills, each a thin wrapper around one
-command. The command is documented for humans in `README.md`; this is the routing, not a manual.
-
-| skill | what it is for |
-| --- | --- |
-| `/<prefix>:<action>` | <one line — the job it does, not how> |
-
-<pipeline order, if one exists: `/<prefix>:<first>` → `/<prefix>:<second>`, with the one reason a step must precede another>
+None yet. Every command is in `README.md` § Run and § Development.
 
 ## 4. What this project produces for others
 
-<the contract it publishes — a corpus, a library, an image, a CRD — where it lands (`<SHARED_ROOT>/docker-picamera/`, a tag, a registry), and the skill that produces it. Or: "nothing — a leaf.">
+The image `kubedge/picamera` (Docker Hub, `linux/arm64`), published by
+`.github/workflows/image.yml` from `main` and `v*` tags, and the chart `charts/picamera`.
+Their contract is `openspec/specs/` (`camera-streaming`, `container-image`, `helm-deployment`).
 
 ## 5. What this project reads
 
-<the bundle, wiki, library or upstream it consumes, and the one document to read first — e.g. `<bundle>/wiki/vault_schema.md` before querying or writing that bundle; a generated index is a manifest, not a read path. Or: "only its own tree.">
+Only its own tree. On the device, picamera2/libcamera come from the Raspberry Pi apt archive.
 
 ## 6. Task routing — everything else
 
 | when you're working on… | invoke |
 | --- | --- |
-| <subsystem> | `/<prefix>:<action>` |
+| the streaming code, the image or the chart | read `architecture.md` first, then `/opsx:propose` |
 | a delivery named in `.local/HANDOFF.md` | `/alemax:complete-update` |
 
 ## 7. How we code and spec here — with skills

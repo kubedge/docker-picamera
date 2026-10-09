@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
+# Build the linux/arm64 image locally. CI builds and publishes it: .github/workflows/image.yml.
+set -euo pipefail
 
-cd "$(readlink -f "$(dirname "$0")")" || exit 9
-
-docker build -t kubedge/picamera .
+cd "$(dirname "$0")"
+docker buildx build --platform linux/arm64 -t kubedge/picamera "$@" .
