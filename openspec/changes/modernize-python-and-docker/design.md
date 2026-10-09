@@ -72,6 +72,7 @@ Separate from meta-owned `ci.yml` (class M; a local edit would conflict on the n
 - `docker/setup-qemu-action@v4`, `setup-buildx-action@v4`, `metadata-action@v6` (tags: `latest` on default branch, `sha-<short>`, semver `{{version}}` and `{{major}}.{{minor}}`), `build-push-action@v7` with `platforms: linux/arm64`, GitHub Actions cache.
 - `login-action@v4` and `push: true` only when `github.event_name != 'pull_request'`. Triggers: `pull_request`, `push` to `main`, tags `v*`. All tags verified to resolve on 2026-10-09.
 - `timeout-minutes` set, matching `ci.yml`'s convention.
+- Docker Hub images (QEMU's binfmt, BuildKit, the `debian` base) are pulled through `mirror.gcr.io`: Docker Hub's anonymous per-IP limit fails shared runners, and pull requests carry no credentials. Found on the first PR run.
 
 ### Helm chart: rename, then rewrite
 `git mv charts/kubesim-picamera-arm32v7 charts/picamera` so history follows, then rewrite: `Chart.yaml` `apiVersion: v2`, `appVersion` = package version; `requirements.yaml` and `configmap-etc.yaml` deleted; helpers renamed `picamera.*`; `required` on `auth.existingSecret`; Ingress moved to `networking.k8s.io/v1`. Values keys: `image.*`, `auth.existingSecret`, `camera.{resolution,framerate,rotate,hflip,vflip}`, `service.*`, `ingress.*`, `nodeSelector`, `resources`.
