@@ -23,15 +23,15 @@ if HELM is None:
     pytest.skip("helm not installed", allow_module_level=True)
 
 
-def render(*sets: str) -> subprocess.CompletedProcess[str]:
-    args = [str(HELM), "template", "cam", str(CHART)]
+def render(*sets: str, namespace: str = "default") -> subprocess.CompletedProcess[str]:
+    args = [str(HELM), "template", "cam", str(CHART), "--namespace", namespace]
     for item in sets:
         args += ["--set", item]
     return subprocess.run(args, capture_output=True, text=True, check=False)
 
 
-def manifests(*sets: str) -> dict[str, dict[str, Any]]:
-    result = render("auth.existingSecret=picamera-auth", *sets)
+def manifests(*sets: str, namespace: str = "default") -> dict[str, dict[str, Any]]:
+    result = render("auth.existingSecret=picamera-auth", *sets, namespace=namespace)
     assert result.returncode == 0, result.stderr
     docs = [d for d in yaml.safe_load_all(result.stdout) if d]
     return {d["kind"]: d for d in docs}
@@ -110,3 +110,44 @@ def test_service_and_no_ingress_by_default() -> None:
 def test_ingress_when_enabled() -> None:
     ingress = manifests("ingress.enabled=true")["Ingress"]
     assert ingress["apiVersion"] == "networking.k8s.io/v1"
+
+
+# --- kubedge-dashboard discovery -----------------------------------------------------
+
+
+def pod_metadata(docs: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    return docs["Deployment"]["spec"]["template"]["metadata"]  # type: ignore[no-any-return]
+
+
+def test_discovery_label_on_pod_template_not_selector() -> None:
+    docs = manifests()
+    assert pod_metadata(docs)["labels"]["kubedge.device.name"] == "camera"
+    assert "kubedge.device.name" not in docs["Deployment"]["spec"]["selector"]["matchLabels"]
+
+
+def test_stream_url_is_the_in_cluster_service_address() -> None:
+    annotations = pod_metadata(manifests(namespace="home"))["annotations"]
+    assert annotations["kubedge.io/stream-url"] == "http://cam-picamera.home:9090/stream.mjpg"
+
+
+def test_external_url_only_when_set() -> None:
+    assert "kubedge.io/external-url" not in pod_metadata(manifests())["annotations"]
+    url = "http://kube-node02:30456/stream.mjpg"
+    annotations = pod_metadata(manifests(f"dashboard.externalUrl={url}"))["annotations"]
+    assert annotations["kubedge.io/external-url"] == url
+
+
+def test_discovery_off_removes_label_and_annotations_only() -> None:
+    on, off = manifests(), manifests("dashboard.discoverable=false")
+    assert "kubedge.device.name" not in pod_metadata(off)["labels"]
+    assert "annotations" not in pod_metadata(off)
+    pod_metadata(on)["labels"].pop("kubedge.device.name")
+    pod_metadata(on).pop("annotations")
+    assert on == off
+
+
+def test_discovery_metadata_carries_no_credentials() -> None:
+    metadata = pod_metadata(manifests("dashboard.externalUrl=http://n:30456/stream.mjpg"))
+    text = yaml.safe_dump({k: metadata.get(k) for k in ("labels", "annotations")})
+    assert "picamera-auth" not in text
+    assert "password" not in text.lower()

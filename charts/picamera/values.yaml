@@ -59,4 +59,12 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+# kubedge-dashboard discovery: label kubedge.device.name=camera on the pod, annotation
+# kubedge.io/stream-url (in-cluster), and kubedge.io/external-url when externalUrl is set.
+# The browser still does the Basic-auth prompt; nothing here carries a credential.
+dashboard:
+  discoverable: true
+  # Browser-reachable stream URL, e.g. http://<node>:30456/stream.mjpg. Empty: no link.
+  externalUrl: ""
+
 resources: {}

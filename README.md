@@ -32,6 +32,12 @@ The stream is then on `http://<node>:30456/`. The chart schedules only onto arm6
 carrying that label, runs one pod per release (a camera has one owner), and probes
 `/healthz`. See `charts/picamera/values.yaml` for every setting.
 
+kubedge-dashboard finds the pod by its label `kubedge.device.name=camera` and reads two
+annotations: `kubedge.io/stream-url` (the in-cluster stream address, always set) and
+`kubedge.io/external-url`, set from `--set dashboard.externalUrl=http://<node>:30456/stream.mjpg`.
+That is the link the dashboard shows; without it, the camera is listed with no link.
+`--set dashboard.discoverable=false` removes all three.
+
 The unauthenticated example from the original picamera recipe (fixed 640×480, no
 credentials) is in the same image:
 
