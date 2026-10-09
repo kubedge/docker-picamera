@@ -35,3 +35,6 @@ go.work
 # Python bytecode
 __pycache__/
 *.pyc
+
+# per-clone state (HANDOFF, feedback, scope-allow, env) — never shipped
+.local/
