@@ -24,9 +24,9 @@
 ## 5. Container image
 
 - [x] 5.1 Verify the pinned uv builder tag exists (`docker manifest inspect ghcr.io/astral-sh/uv:<version>-python3.13-trixie-slim` or the GHCR tags API) before writing it into the Dockerfile
-- [ ] 5.2 Rewrite `Dockerfile` per design (native `builder` stage → wheel; `debian:trixie-slim` runtime with Raspberry Pi archive keyring + source, `python3-picamera2 python3-venv` with `--no-install-recommends`, venv with system site packages, non-root `picamera` user in `video`, `ENV` without credentials, `EXPOSE 8000`, `HEALTHCHECK`, `ENTRYPOINT ["docker-picamera"]`); add `.dockerignore` (`.git`, `.venv`, `.local`, `tests`, meta trees); verify `hadolint Dockerfile` (via `docker run --rm -i hadolint/hadolint < Dockerfile` or the CI job) reports nothing
+- [x] 5.2 Rewrite `Dockerfile` per design (native `builder` stage → wheel; `debian:trixie-slim` runtime with Raspberry Pi archive keyring + source, `python3-picamera2 python3-venv` with `--no-install-recommends`, venv with system site packages, non-root `picamera` user in `video`, `ENV` without credentials, `EXPOSE 8000`, `HEALTHCHECK`, `ENTRYPOINT ["docker-picamera"]`); add `.dockerignore` (`.git`, `.venv`, `.local`, `tests`, meta trees); verify `hadolint Dockerfile` (via `docker run --rm -i hadolint/hadolint < Dockerfile` or the CI job) reports nothing
 - [x] 5.3 Rewrite `build.sh` (`docker buildx build --platform linux/arm64 -t kubedge/picamera .`) and `run.sh` (device globbing, `/run/udev:ro`, `--group-add video`, `AUTH_PASSWORD` required from the caller's environment, no literal credential); verify `shellcheck` and `shfmt -d -i 2 -ci -bn` pass on both and `run.sh` without `AUTH_PASSWORD` exits non-zero before calling docker
-- [ ] 5.4 Add `.github/workflows/image.yml` per design (hadolint, QEMU, buildx, metadata, login+push only off pull requests, `linux/arm64`, GHA cache, `timeout-minutes`); delete `.travis.yml`; verify `actionlint` (or `gh workflow view` after push) accepts it and the PR run builds the image without pushing
+- [x] 5.4 Add `.github/workflows/image.yml` per design (hadolint, QEMU, buildx, metadata, login+push only off pull requests, `linux/arm64`, GHA cache, `timeout-minutes`); delete `.travis.yml`; verify `actionlint` (or `gh workflow view` after push) accepts it and the PR run builds the image without pushing
 - [x] 5.5 Add `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` with descriptions to `.env.example` (not `AUTH_PASSWORD`: `.env.example` keys are projected to GitHub secrets by `bin/sync-secrets.py`, and the stream password is a run-time setting CI never reads — README § Configuration documents it); verify `gitleaks detect --source . --redact` is clean
 
 ## 6. Helm chart
@@ -42,5 +42,5 @@
 
 ## 8. Integration
 
-- [ ] 8.1 Run the pre-commit hooks over this change's files (`pre-commit run --files …`; `--all-files` rewrites meta-owned `.meta-version`, logged as meta feedback) and verify every hook passes without modifying a file; then open the PR and verify `ci.yml` (lint, type-check, test, secret-scan) and `image.yml` (hadolint, arm64 build, no push) are green
+- [x] 8.1 Run the pre-commit hooks over this change's files (`pre-commit run --files …`; `--all-files` rewrites meta-owned `.meta-version`, logged as meta feedback) and verify every hook passes without modifying a file; then open the PR and verify `ci.yml` (lint, type-check, test, secret-scan) and `image.yml` (hadolint, arm64 build, no push) are green
 - [ ] 8.2 On-device check (operator, before the first release tag): on 64-bit Raspberry Pi OS with a camera, `AUTH_PASSWORD=… ./run.sh`, then confirm `/index.html` streams, `/healthz` is 200, `ROTATE=180` flips the image, `docker inspect` shows `healthy`, and `docker stop` exits cleanly
