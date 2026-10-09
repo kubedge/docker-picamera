@@ -7,11 +7,11 @@ Defines the `picamera-rs` Helm chart, which deploys the Rust streamer to Kuberne
 ## ADDED Requirements
 
 ### Requirement: Chart identity
-The chart SHALL live at `charts/picamera-rs`, be named `picamera-rs`, target Helm 3 (`apiVersion: v2`), and deploy image `kubedge/picamera-rs` with the tag defaulting to the chart's `appVersion`.
+The chart SHALL live at `charts/picamera-rs`, be named `picamera-rs`, target Helm 3 (`apiVersion: v2`), and deploy image `kubedge1/picamera-rs` with the tag defaulting to the chart's `appVersion`.
 
 #### Scenario: Default image
 - **WHEN** the chart is rendered with default values
-- **THEN** the container image is `kubedge/picamera-rs:<appVersion>`
+- **THEN** the container image is `kubedge1/picamera-rs:<appVersion>`
 
 ### Requirement: Same deployment contract as the Python chart
 The chart SHALL schedule only on `kubernetes.io/arch=arm64` nodes labelled `picameraInstalled=true`, take credentials from the Secret named by `auth.existingSecret` (failing to render without it), set camera variables from `camera.*` values, give the container host `/dev` and read-only `/run/udev`, probe `GET /healthz` on 8000 for liveness and readiness, and expose a `NodePort` Service — with the same value names and defaults as `charts/picamera`.

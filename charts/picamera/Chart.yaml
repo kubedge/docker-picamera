@@ -14,7 +14,7 @@
 
 apiVersion: v2
 name: picamera
-description: MJPEG stream from a Raspberry Pi camera (kubedge/picamera) on arm64 camera nodes
+description: MJPEG stream from a Raspberry Pi camera (kubedge1/picamera) on arm64 camera nodes
 type: application
 version: 0.2.0
 appVersion: "0.2.0"

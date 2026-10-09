@@ -13,7 +13,7 @@
 # limitations under the License.
 
 image:
-  repository: kubedge/picamera
+  repository: kubedge1/picamera
   # Empty means the chart's appVersion.
   tag: ""
   pullPolicy: IfNotPresent

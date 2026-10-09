@@ -69,8 +69,8 @@ Why trixie: it is Debian stable and the Raspberry Pi archive's current suite; it
 ### CI: `.github/workflows/image.yml`
 Separate from meta-owned `ci.yml` (class M; a local edit would conflict on the next broadcast).
 - `hadolint/hadolint-action@v3.5.0` on `Dockerfile`.
-- `docker/setup-qemu-action@v4`, `setup-buildx-action@v4`, `metadata-action@v6` (tags: `latest` on default branch, `sha-<short>`, semver `{{version}}` and `{{major}}.{{minor}}`), `build-push-action@v7` with `platforms: linux/arm64`, GitHub Actions cache.
-- `login-action@v4` and `push: true` only when `github.event_name != 'pull_request'`. Triggers: `pull_request`, `push` to `main`, tags `v*`. All tags verified to resolve on 2026-10-09.
+- `docker/setup-qemu-action@v4`, `setup-buildx-action@v4`, `build-push-action@v7` with `platforms: linux/arm64`, `push: false`, GitHub Actions cache. Triggers: `pull_request`, `push` to `main`, tags `v*`. All tags verified to resolve on 2026-10-09.
+- No registry login and no secrets: as in kubesim_blinkt, `kubedge1/*` images are pushed by hand (`docker login`, `./build.sh --push`, tags `latest` and the package version). Operator decision 2026-10-09, after comparing with kubesim_blinkt; it replaces the original Docker Hub push from `main` and `v*` tags.
 - `timeout-minutes` set, matching `ci.yml`'s convention.
 - The Raspberry Pi archive key is vendored (`docker/raspberrypi-archive-keyring.pgp`, from `raspberrypi-archive-keyring` 2025.1+rpt1): the copy at `archive.raspberrypi.com/debian/raspberrypi.gpg.key` has SHA-1 self-signatures, which trixie's apt (`sqv`) rejects. Found on the first PR build.
 - Docker Hub images (QEMU's binfmt, BuildKit, the `debian` base) are pulled through `mirror.gcr.io`: Docker Hub's anonymous per-IP limit fails shared runners, and pull requests carry no credentials. Found on the first PR run.
@@ -92,7 +92,7 @@ README filled from the template headings (Install / Run / Configuration / Develo
 
 ## Migration Plan
 
-1. Merge; CI publishes `kubedge/picamera:latest` once `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` exist (operator adds them before merging, or the publish job fails on `main`).
+1. Merge; CI builds. Publish by hand: `docker login`, then `./build.sh --push`.
 2. On each Pi: move to 64-bit Raspberry Pi OS (trixie), confirm `rpicam-hello` sees the camera, then `AUTH_PASSWORD=… ./run.sh`.
 3. Kubernetes: `kubectl create secret generic picamera-auth --from-literal=username=pi --from-literal=password=…`; `helm uninstall` the old `kubesim-picamera-arm32v7` release; `helm install picamera charts/picamera --set auth.existingSecret=picamera-auth`; label camera nodes `picameraInstalled=true`.
 4. Rollback: the previous image tags stay on Docker Hub untouched; the old chart is in git history at `2b033df`.

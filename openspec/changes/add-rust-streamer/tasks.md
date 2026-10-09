@@ -22,8 +22,8 @@
 
 - [ ] 4.1 Write `rust/Dockerfile` per design (native `xx-cargo` builder, `xx-verify`, trixie runtime with `rpicam-apps-core` `--no-install-recommends`, non-root `video` user, no credentials, `HEALTHCHECK` via `--healthcheck`); verify hadolint is clean and `docker buildx build --platform linux/arm64 -f rust/Dockerfile .` succeeds (CI if no local daemon)
 - [ ] 4.2 Add `.github/workflows/rust.yml` (fmt, clippy, test, build, conformance, RSS regression guard) with `timeout-minutes`; verify it runs green on the PR
-- [ ] 4.3 Extend `.github/workflows/image.yml` to a two-image matrix with per-Dockerfile hadolint and identical tag rules; verify the PR run builds both images and pushes neither
-- [ ] 4.4 Make `run.sh` accept the image as an optional argument (default `kubedge/picamera`); verify `shellcheck`/`shfmt` pass and `./run.sh kubedge/picamera-rs` composes the same device flags
+- [ ] 4.3 Extend `.github/workflows/image.yml` to a two-image matrix with per-Dockerfile hadolint, build-only; add `rust/build.sh` (`--push` after manual `docker login`); verify the PR run builds both images and pushes neither
+- [ ] 4.4 Make `run.sh` accept the image as an optional argument (default `kubedge1/picamera`); verify `shellcheck`/`shfmt` pass and `./run.sh kubedge1/picamera-rs` composes the same device flags
 
 ## 5. Helm chart
 

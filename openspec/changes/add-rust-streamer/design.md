@@ -2,7 +2,7 @@
 
 ## Context
 
-Builds on `modernize-python-and-docker` (must be archived first): the `camera-streaming` contract, the trixie + Raspberry Pi archive Dockerfile pattern, `.github/workflows/image.yml`, `run.sh` device handling, and `charts/picamera` all exist when this starts. Facts checked 2026-10-09: `rpicam-vid` ships in `rpicam-apps-core` 1.13.0 (Raspberry Pi archive, trixie, arm64; ~1 MiB, pulls `libcamera0.7` and `librpicam-app1`, no Python stack); `tonistiigi/xx` v1.9.0; Rust stable 1.99.0. Operator decisions: wrap `rpicam-vid`, separate Docker Hub repo `kubedge/picamera-rs`, ≤50% of Python's measured peak, separate chart.
+Builds on `modernize-python-and-docker` (must be archived first): the `camera-streaming` contract, the trixie + Raspberry Pi archive Dockerfile pattern, `.github/workflows/image.yml`, `run.sh` device handling, and `charts/picamera` all exist when this starts. Facts checked 2026-10-09: `rpicam-vid` ships in `rpicam-apps-core` 1.13.0 (Raspberry Pi archive, trixie, arm64; ~1 MiB, pulls `libcamera0.7` and `librpicam-app1`, no Python stack); `tonistiigi/xx` v1.9.0; Rust stable 1.99.0. Operator decisions: wrap `rpicam-vid`, separate Docker Hub repo `kubedge1/picamera-rs`, ≤50% of Python's measured peak, separate chart.
 
 ## Goals / Non-Goals
 
@@ -51,7 +51,7 @@ The keyring/source snippet is duplicated from the Python Dockerfile; extracting 
 
 ### CI
 - `.github/workflows/rust.yml` (project-owned; `ci.yml` is meta class M): `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, then `cargo build` and `uv run pytest tests/conformance` so the Rust fixture runs. Triggered on paths `rust/**`, `tests/conformance/**`, the workflow itself.
-- `.github/workflows/image.yml` gains a matrix `{image: kubedge/picamera, context: ., file: Dockerfile}` / `{image: kubedge/picamera-rs, context: ., file: rust/Dockerfile}`; hadolint runs per Dockerfile; tags and push rules unchanged.
+- `.github/workflows/image.yml` gains a matrix `{image: kubedge1/picamera, context: ., file: Dockerfile}` / `{image: kubedge1/picamera-rs, context: ., file: rust/Dockerfile}`; hadolint runs per Dockerfile; still build-only, no login, no push. A `rust/build.sh` mirrors `build.sh` (`--push` after a manual `docker login`).
 
 ### Chart: `charts/picamera-rs`
 Copied from `charts/picamera` (operator chose separate charts) with names, image and defaults changed; `resources` defaults set from the on-device measurement (initial placeholder `requests.memory: 32Mi`, `limits.memory: 96Mi`, replaced by measured peak × 1.5 before release). A CI step renders a `charts/picamera` values file with both charts and diffs the results to enforce "Values are interchangeable".
@@ -70,7 +70,7 @@ On device: run each image for 10 minutes at 800×600@24 with two `curl` stream c
 ## Migration Plan
 
 1. Ship after `modernize-python-and-docker` is released and measured.
-2. Ensure the Docker Hub token can push `kubedge/picamera-rs` (create the repository if the org disallows create-on-push).
+2. Push by hand with an account that can push `kubedge1/picamera-rs` (create the repository if the org disallows create-on-push).
 3. Per node: `helm uninstall picamera` then `helm install picamera-rs charts/picamera-rs -f <same values>`; rollback is the reverse — same Secret, same values.
 
 ## Open Questions

@@ -2,16 +2,16 @@
 
 ## Purpose
 
-Defines the `picamera` Helm chart: deploying the `kubedge/picamera` stream onto the arm64 Kubernetes nodes that carry a camera, with credentials from a Secret and health from the service itself.
+Defines the `picamera` Helm chart: deploying the `kubedge1/picamera` stream onto the arm64 Kubernetes nodes that carry a camera, with credentials from a Secret and health from the service itself.
 
 ## ADDED Requirements
 
 ### Requirement: Chart identity
-The chart SHALL live at `charts/picamera`, be named `picamera`, target Helm 3 (`apiVersion: v2`), and deploy image `kubedge/picamera` with the tag defaulting to the chart's `appVersion`.
+The chart SHALL live at `charts/picamera`, be named `picamera`, target Helm 3 (`apiVersion: v2`), and deploy image `kubedge1/picamera` with the tag defaulting to the chart's `appVersion`.
 
 #### Scenario: Default image
 - **WHEN** the chart is rendered with default values
-- **THEN** the container image is `kubedge/picamera:<appVersion>`
+- **THEN** the container image is `kubedge1/picamera:<appVersion>`
 
 ### Requirement: Scheduling on camera nodes
 Pods SHALL schedule only onto nodes labelled `kubernetes.io/arch=arm64` and `picameraInstalled=true`.

@@ -52,6 +52,6 @@ Ingress. `tests/test_chart.py` renders it and checks it against the `helm-deploy
 ## CI
 
 `ci.yml` is delivered by claude-meta (do not edit it here); it runs ruff, mypy and pytest
-once `pyproject.toml` exists. `image.yml` is this project's: hadolint, chart tests, the
-arm64 build on pull requests, and the Docker Hub push from `main` and `v*` tags. Ruff
+once `pyproject.toml` exists. `image.yml` is this project's: hadolint, chart tests and the
+arm64 build. It never logs in or pushes; images are pushed by hand (`./build.sh --push`). Ruff
 excludes the meta-owned trees (`bin/`, `plugins/`, `.claude/`, `.agents/`).

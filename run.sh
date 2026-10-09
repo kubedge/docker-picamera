@@ -36,4 +36,4 @@ docker run -d --restart=always --name picamera \
   --group-add video \
   -p 8000:8000 \
   "${env_args[@]}" \
-  kubedge/picamera
+  kubedge1/picamera

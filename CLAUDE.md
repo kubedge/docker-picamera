@@ -12,7 +12,7 @@ Per-model advice, when the model changes: [`docs/MODEL-ADVICE.md`](docs/MODEL-AD
 ## 1. What this project is
 
 An authenticated MJPEG stream of a Raspberry Pi camera, shipped as the arm64 image
-`kubedge/picamera` and the Helm chart `charts/picamera` for Kubernetes camera nodes. It
+`kubedge1/picamera` and the Helm chart `charts/picamera` for Kubernetes camera nodes. It
 streams and reports health; it does not record, transcode, or serve more than one camera.
 
 - **Stack:** python · **Run:** `AUTH_PASSWORD=… ./run.sh` on a Pi; `uv run pytest` anywhere ·
@@ -36,8 +36,8 @@ None yet. Every command is in `README.md` § Run and § Development.
 
 ## 4. What this project produces for others
 
-The image `kubedge/picamera` (Docker Hub, `linux/arm64`), published by
-`.github/workflows/image.yml` from `main` and `v*` tags, and the chart `charts/picamera`.
+The image `kubedge1/picamera` (Docker Hub, `linux/arm64`), pushed by hand with
+`./build.sh --push` (CI only builds it), and the chart `charts/picamera`.
 Their contract is `openspec/specs/` (`camera-streaming`, `container-image`, `helm-deployment`).
 
 ## 5. What this project reads

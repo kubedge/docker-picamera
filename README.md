@@ -1,14 +1,14 @@
 # docker-picamera
 
 An MJPEG stream of a Raspberry Pi camera behind HTTP Basic authentication, shipped as an
-arm64 container image (`kubedge/picamera` on Docker Hub) and a Helm chart for Kubernetes
+arm64 container image (`kubedge1/picamera` on Docker Hub) and a Helm chart for Kubernetes
 camera nodes. A leaf in the kubedge fleet: it depends on no sibling, and anything that
 reads MJPEG over HTTP — a browser, VLC, ffmpeg — consumes it.
 
 ## Install
 
     uv sync                       # development, on any host
-    docker pull kubedge/picamera  # on a Raspberry Pi (64-bit Raspberry Pi OS)
+    docker pull kubedge1/picamera  # on a Raspberry Pi (64-bit Raspberry Pi OS)
 
 ## Run
 
@@ -35,7 +35,7 @@ carrying that label, runs one pod per release (a camera has one owner), and prob
 The unauthenticated example from the original picamera recipe (fixed 640×480, no
 credentials) is in the same image:
 
-    docker run --rm --entrypoint docker-picamera-example ... kubedge/picamera
+    docker run --rm --entrypoint docker-picamera-example ... kubedge1/picamera
 
 Off a Pi, `uv run docker-picamera` validates its configuration and then exits with
 `error: camera: …` (status 1), because picamera2 exists only on the device.
@@ -69,19 +69,25 @@ This project keeps no data tree; it writes nothing outside the repository.
 Tests run on any host: the camera is replaced by a fake, and the chart tests run when
 `helm` is installed. CI (`ci.yml`, delivered by claude-meta) runs the Python gate;
 `image.yml` lints the Dockerfile, tests the chart and builds the image on every pull
-request, and publishes from `main` (`latest`, `sha-<short>`) and `v*` tags
-(`X.Y.Z`, `X.Y`).
+request and push to `main`. CI never logs in to a registry and holds no secrets.
+
+## Publishing
+
+Images are pushed by hand, as for every `kubedge1/*` image:
+
+    docker login                  # an account with push rights to kubedge1
+    ./build.sh --push             # pushes kubedge1/picamera:latest and :<version>
+
+The version is `__version__` in `src/docker_picamera/__init__.py`; keep the chart's
+`appVersion` equal to it.
 
 ## Secrets
 
 - **Run time** — `AUTH_PASSWORD`, supplied where the container runs: the caller's
   environment for `run.sh`, `docker run -e`, or the Kubernetes Secret named by
   `auth.existingSecret`. It is never in the repository, the image or chart values.
-- **CI** — `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (listed in [`.env.example`](.env.example)).
-  They live in the macOS Keychain under service `com.kubedge.docker-picamera`
-  (`bin/set-secret.sh <KEY>`) and are projected to GitHub Actions with
-  `uv run --script bin/sync-secrets.py push DOCKERHUB_USERNAME DOCKERHUB_TOKEN --apply`.
-  Never commit a `.env`.
+- **CI** — none. Registry credentials stay in your local `docker login`; nothing is
+  stored in GitHub. [`.env.example`](.env.example) lists no keys. Never commit a `.env`.
 
 ## Upgrading from the 2018 image
 

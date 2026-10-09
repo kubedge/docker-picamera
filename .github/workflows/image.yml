@@ -1,7 +1,8 @@
 name: Image
 
 # Project-owned: ci.yml is delivered by claude-meta and a local edit there would conflict
-# on the next broadcast. Pull requests lint and build; main and v* tags also publish.
+# on the next broadcast. It lints, tests the chart and builds the image, and never logs in or
+# pushes: like kubesim_blinkt, kubedge1/* images are pushed by hand (README § Publishing).
 on:
   pull_request:
     branches: [main]
@@ -17,7 +18,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE: kubedge/picamera
+  IMAGE: kubedge1/picamera
 
 jobs:
   hadolint:
@@ -71,28 +72,11 @@ jobs:
           buildkitd-config-inline: |
             [registry."docker.io"]
               mirrors = ["mirror.gcr.io"]
-      - id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.IMAGE }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-,format=short,enable={{is_default_branch}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-      # Credentials exist only off pull requests, so a PR (including from a fork) can
-      # never push or read them.
-      - if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
+          tags: ${{ env.IMAGE }}:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Defines the `kubedge/picamera` container image: what it runs on, how it runs, what it must never contain, and how CI builds and publishes it.
+Defines the `kubedge1/picamera` container image: what it runs on, how it runs, what it must never contain, and how CI builds and publishes it.
 
 ## ADDED Requirements
 
 ### Requirement: Platform and name
-The image SHALL be published to Docker Hub as `kubedge/picamera` for `linux/arm64` only, and SHALL run on 64-bit Raspberry Pi OS with a libcamera-supported camera.
+The image SHALL be published to Docker Hub as `kubedge1/picamera` for `linux/arm64` only, and SHALL run on 64-bit Raspberry Pi OS with a libcamera-supported camera.
 
 #### Scenario: Manifest platform
-- **WHEN** the published manifest for `kubedge/picamera:latest` is inspected
+- **WHEN** the published manifest for `kubedge1/picamera:latest` is inspected
 - **THEN** it lists `linux/arm64` and no other platform
 
 ### Requirement: Default command
@@ -24,7 +24,7 @@ The image SHALL start the authenticated stream (`docker-picamera`) by default, e
 The image SHALL NOT contain a value for `AUTH_PASSWORD` in its environment, labels or files. Non-secret defaults (`RESOLUTION`, `FRAMERATE`) MAY be set.
 
 #### Scenario: Inspect the image config
-- **WHEN** `docker image inspect kubedge/picamera` is run
+- **WHEN** `docker image inspect kubedge1/picamera` is run
 - **THEN** its `Env` has no `AUTH_PASSWORD` entry
 
 #### Scenario: Started without a password
@@ -52,20 +52,20 @@ The image SHALL declare a health check that probes `GET /healthz` on port 8000, 
 - **WHEN** the camera has produced a frame within the last 5 seconds
 - **THEN** `docker inspect` reports the container `healthy`
 
-### Requirement: CI build on pull requests
-Every pull request SHALL lint the Dockerfile and build the `linux/arm64` image, and SHALL NOT push it or use registry credentials.
+### Requirement: CI builds and never publishes
+Every pull request and every push to `main` SHALL lint the Dockerfile and build the `linux/arm64` image. CI SHALL NOT log in to a registry, push an image, or hold registry credentials.
 
 #### Scenario: Pull request
 - **WHEN** a pull request changes any file
 - **THEN** the image workflow lints and builds the image and pushes nothing
 
-### Requirement: Publish from main and version tags
-A push to `main` SHALL publish `kubedge/picamera:latest` and `kubedge/picamera:sha-<short-sha>`. A tag `vX.Y.Z` SHALL publish `X.Y.Z` and `X.Y`. Publishing SHALL authenticate with the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
-
 #### Scenario: Merge to main
 - **WHEN** a commit lands on `main`
-- **THEN** `latest` and `sha-<short-sha>` are pushed for `linux/arm64`
+- **THEN** the image is built and nothing is pushed
 
-#### Scenario: Release tag
-- **WHEN** tag `v0.2.0` is pushed
-- **THEN** `0.2.0` and `0.2` are pushed
+### Requirement: Manual publishing
+The image SHALL be published by an operator with push rights to `kubedge1`, using the project's build script after a local `docker login`, tagged `latest` and the package version.
+
+#### Scenario: Publish a release
+- **WHEN** the operator runs `docker login` and then `./build.sh --push` with package version `0.2.0`
+- **THEN** `kubedge1/picamera:latest` and `kubedge1/picamera:0.2.0` are pushed for `linux/arm64`

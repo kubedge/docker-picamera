@@ -55,7 +55,7 @@ def test_rendering_fails_without_the_secret_name() -> None:
 
 def test_default_image_is_the_app_version() -> None:
     app_version = yaml.safe_load((CHART / "Chart.yaml").read_text())["appVersion"]
-    assert container(manifests())["image"] == f"kubedge/picamera:{app_version}"
+    assert container(manifests())["image"] == f"kubedge1/picamera:{app_version}"
 
 
 def test_credentials_come_only_from_the_secret() -> None:
