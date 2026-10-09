@@ -38,8 +38,10 @@ reads the newest frame for each client.
 
 Two stages. `builder` (uv on the build host's own platform) builds the pure-Python wheel
 natively; the `linux/arm64` runtime is `debian:trixie-slim` plus the Raspberry Pi archive
-(key pinned by checksum) for `python3-picamera2`, installed without recommends. Runs as
-`picamera` (uid 10001, group `video`), health-checked on `/healthz`.
+for `python3-picamera2`, installed without recommends. The archive's signing key is
+vendored as `docker/raspberrypi-archive-keyring.pgp`, taken from the archive's own keyring
+package: the downloadable copy has SHA-1 self-signatures that trixie's apt rejects. Runs
+as `picamera` (uid 10001, group `video`), health-checked on `/healthz`.
 
 ## Chart — `charts/picamera`
 

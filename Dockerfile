@@ -11,16 +11,16 @@ RUN uv build --wheel --out-dir /dist
 FROM debian:trixie-slim
 
 # picamera2 and its libcamera bindings ship only as Raspberry Pi apt packages.
-# Key: "Raspberry Pi Archive Signing Key", CF8A 1AF5 02A2 AA2D 763B AE7E 82B1 2992 7FA3 303E.
-ADD --checksum=sha256:76603890d82a492175caf17aba68dc73acb1189c9fd58ec0c19145dfa3866d56 \
-    https://archive.raspberrypi.com/debian/raspberrypi.gpg.key \
-    /usr/share/keyrings/raspberrypi-archive-keyring.asc
+# Key "Raspberry Pi Archive Signing Key", CF8A 1AF5 02A2 AA2D 763B AE7E 82B1 2992 7FA3 303E,
+# vendored from raspberrypi-archive-keyring 2025.1+rpt1, whose self-signatures are SHA-512.
+# The copy served at archive.raspberrypi.com/debian/raspberrypi.gpg.key still carries the
+# 2012 SHA-1 self-signatures, which trixie's apt (sqv) rejects as "not signed".
+COPY docker/raspberrypi-archive-keyring.pgp /usr/share/keyrings/raspberrypi-archive-keyring.pgp
 
 # Versions come from the trixie suites; pinning each would break on every archive update.
 # --no-install-recommends keeps out the Qt/OpenCV preview stack python3-picamera2 recommends.
 # hadolint ignore=DL3008
-RUN chmod 0644 /usr/share/keyrings/raspberrypi-archive-keyring.asc \
-    && echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.asc] http://archive.raspberrypi.com/debian trixie main" \
+RUN echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.pgp] http://archive.raspberrypi.com/debian trixie main" \
         > /etc/apt/sources.list.d/raspberrypi.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends python3-picamera2 python3-venv \

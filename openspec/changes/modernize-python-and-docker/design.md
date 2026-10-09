@@ -72,6 +72,7 @@ Separate from meta-owned `ci.yml` (class M; a local edit would conflict on the n
 - `docker/setup-qemu-action@v4`, `setup-buildx-action@v4`, `metadata-action@v6` (tags: `latest` on default branch, `sha-<short>`, semver `{{version}}` and `{{major}}.{{minor}}`), `build-push-action@v7` with `platforms: linux/arm64`, GitHub Actions cache.
 - `login-action@v4` and `push: true` only when `github.event_name != 'pull_request'`. Triggers: `pull_request`, `push` to `main`, tags `v*`. All tags verified to resolve on 2026-10-09.
 - `timeout-minutes` set, matching `ci.yml`'s convention.
+- The Raspberry Pi archive key is vendored (`docker/raspberrypi-archive-keyring.pgp`, from `raspberrypi-archive-keyring` 2025.1+rpt1): the copy at `archive.raspberrypi.com/debian/raspberrypi.gpg.key` has SHA-1 self-signatures, which trixie's apt (`sqv`) rejects. Found on the first PR build.
 - Docker Hub images (QEMU's binfmt, BuildKit, the `debian` base) are pulled through `mirror.gcr.io`: Docker Hub's anonymous per-IP limit fails shared runners, and pull requests carry no credentials. Found on the first PR run.
 
 ### Helm chart: rename, then rewrite
