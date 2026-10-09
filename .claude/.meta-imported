@@ -1,0 +1,12 @@
+.claude/commands/debug.md
+.claude/commands/plan.md
+.claude/commands/docs.md
+.claude/commands/test.md
+.claude/commands/security.md
+.claude/agents/code-reviewer.md
+.claude/agents/security-scanner.md
+.claude/agents/test-writer.md
+.claude/agents/docs-writer.md
+.claude/skills/opsx/
+.claude/skills/alemax/
+.claude/skills/_uv-wrapper/

@@ -1,0 +1,35 @@
+---
+# One thin skill per `uv run` verb: cp -R this dir to .claude/skills/<verb>/, rename to SKILL.md, fill the <angles>.
+name: <verb>
+description: <what the verb does, one line>. Use when <the words the operator actually says>.
+context: project
+argument-hint: "<the verb's arguments, or nothing>"
+allowed-tools: Bash(uv run {{PROJECT_NAME}} <verb> *)
+metadata:
+  reviewed_model: <the model this body was reviewed against, e.g. claude-5>
+  reviewed: <YYYY-MM-DD>
+---
+## Wraps
+
+`uv run {{PROJECT_NAME}} <verb>` — the logic, its flags and its checks live in the CLI, where
+`--help` and pytest cover them; this body says what to run and what to report. Not a Python
+project: the script rides beside this file under `scripts/` with a PEP 723 header, and the line
+becomes `uv run --script` on that path (without `uv`, `python3`). `bin/skill-check.py` checks both.
+
+## Steps
+
+1. **Resolve the input** from `$ARGUMENTS` or the variable the CLI reads — never a literal path.
+   Unset → stop and ask. A write outside the sandbox tier → confirm first.
+2. **Run** `uv run {{PROJECT_NAME}} <verb> $ARGUMENTS` — one line, foreground, output streamed,
+   never captured into a variable, never chained with another verb.
+3. **Report** the CLI's summary line verbatim and any `ERROR` line with its path. Non-zero exit →
+   show the message and stop; do not retry with other flags. Name the follow-up verb; never run it.
+
+## What you get
+
+<the artifact or state change, one line — what the operator can check afterwards>
+
+## When not to use
+
+- <the sibling verb or skill that covers the neighbouring case>
+- <the one trap this verb has sprung, symptom first — a third trap is a `doctor` verb, not a line>
