@@ -37,7 +37,7 @@ None yet. Every command is in `README.md` § Run and § Development.
 ## 4. What this project produces for others
 
 The image `kubedge1/picamera` (Docker Hub, `linux/arm64`), pushed by hand with
-`./build.sh --push` (CI only builds it), and the chart `charts/picamera`.
+`make push` (CI only builds it), and the chart `charts/picamera`.
 Their contract is `openspec/specs/` (`camera-streaming`, `container-image`, `helm-deployment`).
 
 ## 5. What this project reads
