@@ -59,6 +59,7 @@ This project keeps no data tree; it writes nothing outside the repository.
 
 ## Development
 
+    make check                    # all of the below except the image build
     uv run pytest
     uv run ruff check . && uv run ruff format --check .
     uv run mypy src
@@ -75,8 +76,9 @@ request and push to `main`. CI never logs in to a registry and holds no secrets.
 
 Images are pushed by hand, as for every `kubedge1/*` image:
 
-    docker login                  # an account with push rights to kubedge1
-    ./build.sh --push             # pushes kubedge1/picamera:latest and :<version>
+    docker login                  # once; an account with push rights to kubedge1
+    make push                     # make check (lint, mypy, tests, helm lint), then
+                                  # pushes kubedge1/picamera:latest and :<version>
 
 The version is `__version__` in `src/docker_picamera/__init__.py`; keep the chart's
 `appVersion` equal to it.
