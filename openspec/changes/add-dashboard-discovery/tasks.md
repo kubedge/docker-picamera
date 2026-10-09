@@ -2,7 +2,7 @@
 
 ## 1. Prerequisite
 
-- [ ] 1.1 Confirm `modernize-python-and-docker` is archived (`openspec list --specs` shows `helm-deployment`); verify `openspec validate add-dashboard-discovery --strict` passes against it
+- [x] 1.1 Confirm `modernize-python-and-docker` is archived (`openspec list --specs` shows `helm-deployment`); verify `openspec validate add-dashboard-discovery --strict` passes against it
 
 ## 2. Chart
 
