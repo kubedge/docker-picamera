@@ -45,5 +45,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD ["python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
 
-USER picamera
+# Numeric, so hosts and Kubernetes' runAsNonRoot can verify it; it is the `picamera`
+# account above, whose `video` membership the runtime reads from /etc/group.
+USER 10001
 ENTRYPOINT ["docker-picamera"]
