@@ -15,5 +15,5 @@
 
 ## 4. Integration
 
-- [ ] 4.1 Open the PR; verify CI green (`chart` job runs the new tests)
+- [x] 4.1 Open the PR; verify CI green (`chart` job runs the new tests)
 - [ ] 4.2 Tell kubedge-dashboard (cross-session) the keys are live on `main`, with the chart version; verify its reply
