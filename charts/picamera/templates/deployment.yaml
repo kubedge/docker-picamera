@@ -32,6 +32,17 @@ spec:
     metadata:
       labels:
         {{- include "picamera.selectorLabels" . | nindent 8 }}
+        {{- if .Values.dashboard.discoverable }}
+        # Pod template only: the Deployment selector is immutable.
+        kubedge.device.name: camera
+        {{- end }}
+      {{- if .Values.dashboard.discoverable }}
+      annotations:
+        kubedge.io/stream-url: {{ include "picamera.streamUrl" . | quote }}
+        {{- with .Values.dashboard.externalUrl }}
+        kubedge.io/external-url: {{ . | quote }}
+        {{- end }}
+      {{- end }}
     spec:
       containers:
         - name: picamera

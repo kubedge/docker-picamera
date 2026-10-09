@@ -47,6 +47,10 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- printf "%s:%s" .Values.image.repository (default .Chart.AppVersion .Values.image.tag) -}}
 {{- end -}}
 
+{{- define "picamera.streamUrl" -}}
+{{- printf "http://%s.%s:%v/stream.mjpg" (include "picamera.fullname" .) .Release.Namespace .Values.service.port -}}
+{{- end -}}
+
 {{- define "picamera.authSecret" -}}
 {{- required "auth.existingSecret must name an existing Secret with keys username and password" .Values.auth.existingSecret -}}
 {{- end -}}

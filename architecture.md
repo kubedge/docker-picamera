@@ -48,6 +48,10 @@ as `picamera` (uid 10001, group `video`), health-checked on `/healthz`.
 Deployment (privileged, because Kubernetes grants host device nodes only to privileged
 containers; host `/dev` and read-only `/run/udev` for libcamera), NodePort Service, optional
 Ingress. `tests/test_chart.py` renders it and checks it against the `helm-deployment` spec.
+Dashboard discovery is pod-template metadata only: the label `kubedge.device.name=camera`
+and the annotations `kubedge.io/stream-url` / `kubedge.io/external-url`, never the Deployment
+selector (immutable, so adding to it would break `helm upgrade`). The label key is the one
+kubedge-dashboard already selects on; renaming it is a change in both repos.
 
 ## CI
 
