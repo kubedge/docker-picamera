@@ -31,3 +31,10 @@ go.work
 .DS_Store
 .DS_Store
 .DS_Store
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# per-clone state (HANDOFF, feedback, scope-allow, env) — never shipped
+.local/
