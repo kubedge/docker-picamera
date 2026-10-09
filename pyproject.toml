@@ -1,0 +1,58 @@
+[project]
+name = "docker-picamera"
+dynamic = ["version"]
+description = "Authenticated MJPEG streaming from a Raspberry Pi camera, packaged as a container."
+readme = "README.md"
+requires-python = ">=3.11"
+# EMPTY ON PURPOSE. The camera stack (picamera2, libcamera) is not installable from PyPI
+# alone — the libcamera bindings ship only as Raspberry Pi apt packages — so the image
+# installs it with apt and the app sees it through a --system-site-packages venv.
+# Nothing outside src/docker_picamera/camera.py may import it.
+dependencies = []
+
+[project.scripts]
+docker-picamera = "docker_picamera.cli:main"
+docker-picamera-example = "docker_picamera.cli:example_main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.16",
+    "mypy>=2.3",
+    "pyyaml>=6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/docker_picamera/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docker_picamera"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+# Meta-owned trees arrive by cherry-pick from claude-meta and are linted there; editing
+# them here would conflict with the next broadcast. force-exclude keeps them out even
+# when pre-commit passes their paths explicitly.
+extend-exclude = ["bin", "plugins", ".claude", ".agents"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "LOG", "RUF", "A"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+
+[[tool.mypy.overrides]]
+# Provided by the image's apt packages, untyped, and absent on dev hosts and CI runners.
+module = ["picamera2", "picamera2.*", "libcamera", "libcamera.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

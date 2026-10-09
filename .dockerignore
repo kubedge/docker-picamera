@@ -1,0 +1,8 @@
+# Allow-list: the image build needs only the package sources and their metadata.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!docker/raspberrypi-archive-keyring.pgp
+**/__pycache__

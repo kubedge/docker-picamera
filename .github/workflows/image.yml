@@ -1,0 +1,82 @@
+name: Image
+
+# Project-owned: ci.yml is delivered by claude-meta and a local edit there would conflict
+# on the next broadcast. It lints, tests the chart and builds the image, and never logs in or
+# pushes: like kubesim_blinkt, kubedge1/* images are pushed by hand (README § Publishing).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: kubedge1/picamera
+
+jobs:
+  hadolint:
+    name: hadolint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hadolint/hadolint-action@v3.5.0
+        with:
+          dockerfile: Dockerfile
+
+  chart:
+    name: chart (helm lint + render tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.0
+      - run: helm lint charts/picamera --set auth.existingSecret=lint
+      # Same uv pin as ci.yml; see the note there before bumping.
+      - uses: astral-sh/setup-uv@v7
+      - name: render tests
+        env:
+          REQUIRE_HELM: "1"
+        run: |
+          uv sync --locked
+          uv run pytest tests/test_chart.py
+
+  build:
+    name: build (linux/arm64)
+    needs: hadolint
+    runs-on: ubuntu-latest
+    # The runtime stage's apt install runs under QEMU; the wheel stage runs natively.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      # Docker Hub allows only a few anonymous pulls per hour per IP, and runner IPs are
+      # shared, so every Docker Hub image this job needs comes through Google's mirror:
+      # binfmt for QEMU, the BuildKit image, and (via buildkitd's mirror, falling back to
+      # docker.io) the Dockerfile's base. Pull requests stay credential-free.
+      - uses: docker/setup-qemu-action@v4
+        with:
+          image: mirror.gcr.io/tonistiigi/binfmt:latest
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/arm64
+          push: false
+          tags: ${{ env.IMAGE }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

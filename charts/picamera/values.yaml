@@ -1,0 +1,62 @@
+# Copyright 2018 Kubedge.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+image:
+  repository: kubedge1/picamera
+  # Empty means the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+auth:
+  # REQUIRED. Name of an existing Secret with keys `username` and `password`:
+  #   kubectl create secret generic picamera-auth \
+  #     --from-literal=username=pi --from-literal=password=<password>
+  # No credential is ever set in values.
+  existingSecret: ""
+
+camera:
+  resolution: 800x600
+  framerate: 24
+  # 0 or 180 only.
+  rotate: 0
+  hflip: false
+  vflip: false
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Camera nodes: label each with `kubectl label node <node> picameraInstalled=true`.
+nodeSelector:
+  kubernetes.io/arch: arm64
+  picameraInstalled: "true"
+
+service:
+  type: NodePort
+  port: 9090
+  nodePort: 30456
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - /
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
