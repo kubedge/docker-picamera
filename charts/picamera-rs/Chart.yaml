@@ -16,5 +16,5 @@ apiVersion: v2
 name: picamera-rs
 description: MJPEG stream from a Raspberry Pi camera, Rust implementation (kubedge1/picamera-rs), on arm64 camera nodes
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.2.0
+appVersion: "0.3.0"
