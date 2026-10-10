@@ -8,6 +8,7 @@
 
 ## Archived
 
+- add-rust-hw-jpeg (2026-10-09) — picamera-rs ENCODER=software|hardware|auto + JPEG_QUALITY; V4L2 bcm2835-codec-encode_image (/dev/video31) by hand ioctls; fixes for 64-byte-padded I420 rows (0.4.2) and SIGTERM hang (0.4.3); on device hardware saves ~3 CPU points, default stays software.
 - add-rust-streamer (2026-10-10) — picamera-rs (Rust, rpicam-vid), shared conformance suite, kubedge1/picamera-rs, charts/picamera-rs; on device 7.0 MiB vs Python 33.3 (21%).
 
 - add-dashboard-discovery (2026-10-09) — chart label kubedge.device.name=camera + kubedge.io/stream-url / external-url annotations; matched by kubedge-dashboard PR #11.

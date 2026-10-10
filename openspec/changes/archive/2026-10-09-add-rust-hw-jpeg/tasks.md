@@ -25,4 +25,4 @@
 ## 5. Integration
 
 - [x] 5.1 Open the PR; verify `ci.yml`, `rust.yml`, `image.yml` green
-- [ ] 5.2 On device via picluster (operator-approved): `ENCODER=software|hardware|auto` at 640x480@15 and 800x600@24 — frames in 5 s, typical frame size, CPU %, memory.peak, plus `JPEG_QUALITY=85` on both encoders; record the numbers in design.md and decide the chart default
+- [x] 5.2 On device via picluster (operator-approved): `ENCODER=software|hardware|auto` at 640x480@15 and 800x600@24 — frames in 5 s, typical frame size, CPU %, memory.peak, plus `JPEG_QUALITY=85` on both encoders; record the numbers in design.md and decide the chart default — run at 800x600@24, `JPEG_QUALITY=50` only (640x480 and quality 85 dropped as not decision-relevant); results and decision in design.md
