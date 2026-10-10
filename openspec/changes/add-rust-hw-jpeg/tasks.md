@@ -2,8 +2,8 @@
 
 ## 1. Prerequisites and device facts
 
-- [ ] 1.1 Confirm `add-rust-streamer` is archived (`openspec list --specs` shows `rust-streamer`); via picluster-automation (read-only on kube-node02) confirm a `/dev/video*` whose V4L2 card name is `bcm2835-codec-encode_image` and that it lists `YU12` on OUTPUT and `JPEG` on CAPTURE; record the result in design.md
-- [ ] 1.2 Via picluster (one approved run) capture 3 frames of `rpicam-vid --codec yuv420 -o -` at 640x480 and 800x600 and report the byte count per frame; fix the stride rule in design.md to what was observed
+- [x] 1.1 Confirm `add-rust-streamer` is archived (`openspec list --specs` shows `rust-streamer`); via picluster-automation (read-only on kube-node02) confirm a `/dev/video*` whose V4L2 card name is `bcm2835-codec-encode_image` and that it lists `YU12` on OUTPUT and `JPEG` on CAPTURE; record the result in design.md
+- [x] 1.2 Via picluster (one approved run) capture 3 frames of `rpicam-vid --codec yuv420 -o -` at 640x480 and 800x600 and report the byte count per frame; fix the stride rule in design.md to what was observed
 
 ## 2. Hardware source
 
@@ -24,5 +24,5 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Open the PR; verify `ci.yml`, `rust.yml`, `image.yml` green
+- [x] 5.1 Open the PR; verify `ci.yml`, `rust.yml`, `image.yml` green
 - [ ] 5.2 On device via picluster (operator-approved): `ENCODER=software|hardware|auto` at 640x480@15 and 800x600@24 — frames in 5 s, typical frame size, CPU %, memory.peak, plus `JPEG_QUALITY=85` on both encoders; record the numbers in design.md and decide the chart default

@@ -1,6 +1,6 @@
 [package]
 name = "picamera-rs"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2024"
 description = "Memory-lean Rust implementation of the docker-picamera MJPEG stream (camera-streaming contract)."
 license = "Apache-2.0"

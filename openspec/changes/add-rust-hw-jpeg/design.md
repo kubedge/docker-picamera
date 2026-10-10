@@ -53,7 +53,9 @@ Opt-in: deployments change nothing until they set `ENCODER`. Recommended rollout
 - **Ioctls by hand** (task 2.1): the encoder is multi-planar (as picamera2's V4L2 encoder); the `v4l` crate's M2M multi-planar support is thin, so `hwjpeg.rs` declares the seven structures and eight ioctls it needs over `libc`, with compile-time `size_of` checks against the 64-bit kernel layouts. Still no C library; cross-compile unchanged. Linux-only; a stub elsewhere.
 - **Probe via sysfs name** (`/sys/class/video4linux/videoN/name`), overridable with `PICAMERA_V4L2_SYSFS` for tests, rather than `VIDIOC_QUERYCAP` on every node.
 - **No in-process restart on encoder timeout**: a 1 s timeout (or any encode error) ends the pipeline with an error and the service exits 1, like a dead camera process; the container restarts. Simpler than the planned session restart; same observable outcome for an orchestrator.
-- **Stride**: raw frames assumed unpadded (`w*h*3/2`), pending the device check (task 1.2).
+- **Device facts (kube-node02, Pi 3, OV5647, 2026-10-10)**: the encoder is `/dev/video31` (`bcm2835-codec-encode_image`, `root:video`, so the container needs gid 44). `rpicam-vid --codec yuv420` pads luma rows to 64 bytes: 640x480 → 460800 bytes/frame (unpadded), 800x600 → 748800 = Y 832×600 + U/V 416×300 each. 0.4.1 assumed unpadded and would have read 800x600 frames out of step.
+- **Stride (0.4.2)**: frames are read with luma stride `align_up(w,64)`, chroma half, and each is repacked into the layout the driver returns from `VIDIOC_S_FMT` (`bytesperline`, rows = `sizeimage / (1.5·bytesperline)`), so a driver that rounds stride or height differently still gets aligned planes. Formats are confirmed by a streaming hardware run (task 5.2), not `v4l2-ctl`, which the image does not ship.
+- **Encoder error at camera EOF** is now returned, not swallowed (surfaced by a Linux test run during the stride fix).
 - **`auto` falls back also when the encoder is present but cannot be opened**, logged as `hardware JPEG encoder unusable (…)`; `hardware` exits 1 in both cases.
 
 ## Open Questions
