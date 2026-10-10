@@ -5,6 +5,8 @@
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.9.0 AS xx
 
 FROM --platform=$BUILDPLATFORM rust:1.99-slim-trixie AS builder
+# xx is a set of wrapper scripts meant to be copied whole into the build stage.
+# hadolint ignore=DL3067
 COPY --from=xx / /
 # hadolint ignore=DL3008
 RUN apt-get update \
