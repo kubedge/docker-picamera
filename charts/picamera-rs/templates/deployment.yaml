@@ -73,6 +73,14 @@ spec:
               value: {{ .Values.camera.hflip | quote }}
             - name: VFLIP
               value: {{ .Values.camera.vflip | quote }}
+            {{- with .Values.camera.encoder }}
+            - name: ENCODER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.camera.jpegQuality }}
+            - name: JPEG_QUALITY
+              value: {{ . | quote }}
+            {{- end }}
           ports:
             - name: http
               containerPort: 8000

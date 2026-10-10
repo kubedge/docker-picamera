@@ -19,6 +19,20 @@ pub struct Config {
     pub hflip: bool,
     pub vflip: bool,
     pub port: u16,
+    pub encoder: EncoderChoice,
+    /// 1..=100; `None` keeps the encoder's own default.
+    pub jpeg_quality: Option<u32>,
+}
+
+/// `ENCODER`: where JPEG encoding happens (rust-streamer "Encoder selection").
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EncoderChoice {
+    /// Inside `rpicam-vid` (libjpeg on the CPU) — the default, unchanged behaviour.
+    Software,
+    /// On the Pi's V4L2 JPEG encoder; startup fails if it is missing.
+    Hardware,
+    /// Hardware when the encoder exists, software otherwise.
+    Auto,
 }
 
 /// `docker-picamera-example` / `picamera-rs --example`: fixed settings, no credentials.
@@ -33,6 +47,8 @@ pub fn example_config(env: &HashMap<String, String>) -> Result<Config, String> {
         hflip: false,
         vflip: false,
         port: load_port(env)?,
+        encoder: EncoderChoice::Software,
+        jpeg_quality: None,
     })
 }
 
@@ -86,7 +102,42 @@ pub fn load_config(env: &HashMap<String, String>) -> Result<Config, String> {
         hflip: flag(env, "HFLIP")?,
         vflip: flag(env, "VFLIP")?,
         port: load_port(env)?,
+        encoder: load_encoder(env)?,
+        jpeg_quality: load_jpeg_quality(env)?,
     })
+}
+
+/// `ENCODER`, default `software`.
+pub fn load_encoder(env: &HashMap<String, String>) -> Result<EncoderChoice, String> {
+    let raw = env
+        .get("ENCODER")
+        .cloned()
+        .unwrap_or_else(|| "software".into());
+    match raw.to_lowercase().as_str() {
+        "software" => Ok(EncoderChoice::Software),
+        "hardware" => Ok(EncoderChoice::Hardware),
+        "auto" => Ok(EncoderChoice::Auto),
+        _ => Err(format!(
+            "ENCODER: expected software, hardware or auto, got {}",
+            py_repr(&raw)
+        )),
+    }
+}
+
+/// `JPEG_QUALITY`, optional, 1..=100.
+pub fn load_jpeg_quality(env: &HashMap<String, String>) -> Result<Option<u32>, String> {
+    let Some(raw) = env.get("JPEG_QUALITY") else {
+        return Ok(None);
+    };
+    digits(raw)
+        .filter(|q| (1..=100).contains(q))
+        .map(Some)
+        .ok_or_else(|| {
+            format!(
+                "JPEG_QUALITY: expected an integer from 1 to 100, got {}",
+                py_repr(raw)
+            )
+        })
 }
 
 /// `PORT`, default 8000.
@@ -174,6 +225,8 @@ mod tests {
                 hflip: false,
                 vflip: false,
                 port: 8000,
+                encoder: EncoderChoice::Software,
+                jpeg_quality: None,
             }
         );
     }
@@ -261,6 +314,42 @@ mod tests {
     fn port_must_be_1_to_65535() {
         for v in ["0", "65536", "abc", ""] {
             assert!(err(&[("PORT", v)]).starts_with("PORT: "), "{v}");
+        }
+    }
+
+    #[test]
+    fn encoder_choices() {
+        assert_eq!(
+            load_config(&env(&[])).unwrap().encoder,
+            EncoderChoice::Software
+        );
+        for (v, want) in [
+            ("software", EncoderChoice::Software),
+            ("HARDWARE", EncoderChoice::Hardware),
+            ("auto", EncoderChoice::Auto),
+        ] {
+            assert_eq!(load_config(&env(&[("ENCODER", v)])).unwrap().encoder, want);
+        }
+        assert_eq!(
+            err(&[("ENCODER", "gpu")]),
+            "ENCODER: expected software, hardware or auto, got 'gpu'"
+        );
+    }
+
+    #[test]
+    fn jpeg_quality_optional_1_to_100() {
+        assert_eq!(load_config(&env(&[])).unwrap().jpeg_quality, None);
+        assert_eq!(
+            load_config(&env(&[("JPEG_QUALITY", "85")]))
+                .unwrap()
+                .jpeg_quality,
+            Some(85)
+        );
+        for v in ["0", "101", "abc", ""] {
+            assert_eq!(
+                err(&[("JPEG_QUALITY", v)]),
+                format!("JPEG_QUALITY: expected an integer from 1 to 100, got '{v}'")
+            );
         }
     }
 

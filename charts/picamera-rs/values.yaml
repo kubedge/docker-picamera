@@ -32,6 +32,11 @@ camera:
   rotate: 0
   hflip: false
   vflip: false
+  # Rust only (rust-streamer "Encoder selection"): software | hardware | auto.
+  # Empty = the image default (software). auto uses the Pi's V4L2 JPEG encoder when present.
+  encoder: ""
+  # Rust only: 1-100. Empty = each encoder's own default.
+  jpegQuality: ""
 
 nameOverride: ""
 fullnameOverride: ""

@@ -62,6 +62,8 @@ Off a Pi, `uv run docker-picamera` validates its configuration and then exits wi
 | `ROTATE` | `0` or `180` (libcamera cannot rotate by 90/270) | `0` | no |
 | `HFLIP`, `VFLIP` | `true` / `false` | `false` | no |
 | `PORT` | TCP port to listen on | `8000` | no |
+| `ENCODER` | Rust only: `software` (JPEG in `rpicam-vid`, CPU), `hardware` (the Pi 3/4's V4L2 JPEG encoder; fails if absent), `auto` (hardware if present) | `software` | no |
+| `JPEG_QUALITY` | Rust only: 1–100 for whichever encoder runs | encoder default | no |
 
 Routes: `/` → `/index.html` (page), `/stream.mjpg` (stream), both authenticated;
 `/healthz` is open and returns `200` while frames are less than 5 s old, `503` otherwise.
