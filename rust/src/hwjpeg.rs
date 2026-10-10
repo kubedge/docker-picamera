@@ -35,10 +35,59 @@ pub fn probe(sysfs: &Path) -> Option<PathBuf> {
     found.first().map(|node| Path::new("/dev").join(node))
 }
 
-/// Bytes in one I420 frame as `rpicam-vid --codec yuv420` writes it (no row padding).
+/// Luma row stride of `rpicam-vid --codec yuv420` output: the width rounded up to 64
+/// bytes (the ISP's alignment; measured on a Pi 3: 800 wide → 832). Chroma rows are half.
+pub fn i420_stride(width: u32) -> usize {
+    (width as usize).next_multiple_of(64)
+}
+
+/// Bytes in one I420 frame as `rpicam-vid --codec yuv420` writes it, row padding included.
 pub fn i420_frame_size(width: u32, height: u32) -> usize {
-    let (w, h) = (width as usize, height as usize);
-    w * h + 2 * w.div_ceil(2) * h.div_ceil(2)
+    let (stride, h) = (i420_stride(width), height as usize);
+    stride * h + 2 * (stride / 2) * h.div_ceil(2)
+}
+
+/// Copy an I420 frame of `width`x`height` from `src` (camera layout: luma stride
+/// `src_stride`, planes back to back) into `dst` laid out as the encoder asks: luma stride
+/// `dst_stride`, `dst_rows` luma rows per plane allocation (chroma half of each).
+/// Padding bytes in `dst` are left as they were.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn repack_i420(
+    src: &[u8],
+    src_stride: usize,
+    dst: &mut [u8],
+    dst_stride: usize,
+    dst_rows: usize,
+    width: usize,
+    height: usize,
+) {
+    let (cw, ch) = (width.div_ceil(2), height.div_ceil(2));
+    let planes = [
+        (0, 0, src_stride, dst_stride, width, height),
+        (
+            src_stride * height,
+            dst_stride * dst_rows,
+            src_stride / 2,
+            dst_stride / 2,
+            cw,
+            ch,
+        ),
+        (
+            src_stride * height + (src_stride / 2) * ch,
+            dst_stride * dst_rows + (dst_stride / 2) * dst_rows.div_ceil(2),
+            src_stride / 2,
+            dst_stride / 2,
+            cw,
+            ch,
+        ),
+    ];
+    for (src_off, dst_off, ss, ds, w, h) in planes {
+        for row in 0..h {
+            let s = src_off + row * ss;
+            let d = dst_off + row * ds;
+            dst[d..d + w].copy_from_slice(&src[s..s + w]);
+        }
+    }
 }
 
 /// Something that turns one raw frame into one JPEG.
@@ -83,7 +132,7 @@ mod linux {
 
     use bytes::Bytes;
 
-    use super::{JpegEncode, i420_frame_size};
+    use super::{JpegEncode, i420_frame_size, i420_stride, repack_i420};
 
     // --- uapi/linux/videodev2.h, the parts used here ----------------------------------
 
@@ -230,7 +279,13 @@ mod linux {
     /// An open encoder session for one resolution.
     pub struct HwJpeg {
         fd: i32,
+        width: usize,
+        height: usize,
         frame_size: usize,
+        /// The encoder's input layout, as `VIDIOC_S_FMT` returned it.
+        bytesperline: usize,
+        rows: usize,
+        sizeimage: usize,
         output: Mapping,
         capture: Mapping,
     }
@@ -252,16 +307,33 @@ mod linux {
                 ));
             }
             let frame_size = i420_frame_size(width, height);
-            let setup = || -> Result<(Mapping, Mapping)> {
-                set_format(
+            let stride = i420_stride(width);
+            let setup = || -> Result<(Mapping, Mapping, usize, usize, usize)> {
+                // Ask for the camera's own stride; the driver may round it or the height
+                // up, so the layout it returns is the one frames are repacked into.
+                let (bytesperline, sizeimage) = set_format(
                     fd,
                     BUF_TYPE_OUTPUT_MPLANE,
                     PIX_FMT_YUV420,
                     width,
                     height,
-                    width,
+                    stride as u32,
                     frame_size,
                 )?;
+                let rows = if bytesperline == 0 {
+                    0
+                } else {
+                    sizeimage * 2 / (3 * bytesperline)
+                };
+                if bytesperline < width as usize || rows < height as usize {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        format!(
+                            "encoder input layout {bytesperline} bytes/line x {rows} rows \
+                             cannot hold {width}x{height}"
+                        ),
+                    ));
+                }
                 set_format(
                     fd,
                     BUF_TYPE_CAPTURE_MPLANE,
@@ -279,18 +351,29 @@ mod linux {
                     xioctl(fd, VIDIOC_S_CTRL, &mut ctrl, "set JPEG quality")?;
                 }
                 let output = map_one(fd, BUF_TYPE_OUTPUT_MPLANE)?;
+                if output.len < sizeimage {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        format!("encoder input buffer {} < {sizeimage} bytes", output.len),
+                    ));
+                }
                 let capture = map_one(fd, BUF_TYPE_CAPTURE_MPLANE)?;
                 queue(fd, BUF_TYPE_CAPTURE_MPLANE, 0)?;
                 for typ in [BUF_TYPE_OUTPUT_MPLANE, BUF_TYPE_CAPTURE_MPLANE] {
                     let mut t = typ as i32;
                     xioctl(fd, VIDIOC_STREAMON, &mut t, "stream on")?;
                 }
-                Ok((output, capture))
+                Ok((output, capture, bytesperline, rows, sizeimage))
             };
             match setup() {
-                Ok((output, capture)) => Ok(Self {
+                Ok((output, capture, bytesperline, rows, sizeimage)) => Ok(Self {
                     fd,
+                    width: width as usize,
+                    height: height as usize,
                     frame_size,
+                    bytesperline,
+                    rows,
+                    sizeimage,
                     output,
                     capture,
                 }),
@@ -305,7 +388,7 @@ mod linux {
 
     impl JpegEncode for HwJpeg {
         fn encode(&mut self, raw: &[u8]) -> Result<Bytes> {
-            if raw.len() != self.frame_size || raw.len() > self.output.len {
+            if raw.len() != self.frame_size {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
                     format!(
@@ -315,9 +398,19 @@ mod linux {
                     ),
                 ));
             }
-            // SAFETY: the output mapping is at least frame_size bytes (checked above).
-            unsafe { std::ptr::copy_nonoverlapping(raw.as_ptr(), self.output.ptr, raw.len()) };
-            queue_used(self.fd, BUF_TYPE_OUTPUT_MPLANE, 0, raw.len() as u32)?;
+            // SAFETY: the output mapping is at least sizeimage bytes (checked in open) and
+            // only this thread touches it while the buffer is dequeued.
+            let input = unsafe { std::slice::from_raw_parts_mut(self.output.ptr, self.sizeimage) };
+            repack_i420(
+                raw,
+                i420_stride(self.width as u32),
+                input,
+                self.bytesperline,
+                self.rows,
+                self.width,
+                self.height,
+            );
+            queue_used(self.fd, BUF_TYPE_OUTPUT_MPLANE, 0, self.sizeimage as u32)?;
             wait_readable(self.fd, 1000)?;
             let used = dequeue(self.fd, BUF_TYPE_CAPTURE_MPLANE)? as usize;
             // SAFETY: the driver wrote `used` bytes into the capture mapping.
@@ -349,7 +442,7 @@ mod linux {
         height: u32,
         bytesperline: u32,
         sizeimage: usize,
-    ) -> Result<()> {
+    ) -> Result<(usize, usize)> {
         let mut pix = PixFormatMplane {
             width,
             height,
@@ -368,7 +461,10 @@ mod linux {
             fmt: FormatUnion { raw: [0; 200] },
         };
         format.fmt.pix_mp = pix;
-        xioctl(fd, VIDIOC_S_FMT, &mut format, "set format")
+        xioctl(fd, VIDIOC_S_FMT, &mut format, "set format")?;
+        // SAFETY: S_FMT on a multi-planar type fills pix_mp.
+        let plane = unsafe { format.fmt.pix_mp.plane_fmt[0] };
+        Ok((plane.bytesperline as usize, plane.sizeimage as usize))
     }
 
     fn map_one(fd: i32, typ: u32) -> Result<Mapping> {
@@ -470,10 +566,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn i420_sizes() {
+    fn i420_sizes_match_rpicam_vid_on_device() {
+        // Measured on kube-node02 (Pi 3, OV5647): 640 is 64-aligned, 800 pads to 832.
         assert_eq!(i420_frame_size(640, 480), 460_800);
-        assert_eq!(i420_frame_size(800, 600), 720_000);
-        assert_eq!(i420_frame_size(3, 3), 9 + 2 * 4);
+        assert_eq!(i420_frame_size(800, 600), 748_800);
+        assert_eq!(i420_stride(800), 832);
+    }
+
+    #[test]
+    fn repack_moves_each_plane_to_the_encoder_layout() {
+        let (w, h, ss) = (4usize, 2usize, 6usize);
+        // camera layout: Y 6x2, U 3x1, V 3x1; padding bytes are 0xEE.
+        let src = [
+            1, 2, 3, 4, 0xEE, 0xEE, 5, 6, 7, 8, 0xEE, 0xEE, // Y
+            9, 10, 0xEE, // U
+            11, 12, 0xEE, // V
+        ];
+        let (ds, rows) = (8usize, 4usize);
+        let mut dst = vec![0u8; ds * rows * 3 / 2];
+        repack_i420(&src, ss, &mut dst, ds, rows, w, h);
+        assert_eq!(&dst[0..4], &[1, 2, 3, 4]);
+        assert_eq!(&dst[8..12], &[5, 6, 7, 8]);
+        assert_eq!(&dst[32..34], &[9, 10]); // U at ds*rows
+        assert_eq!(&dst[40..42], &[11, 12]); // V at ds*rows + ds/2*rows/2
+        assert_eq!(dst.iter().filter(|&&b| b == 0xEE).count(), 0);
     }
 
     #[test]

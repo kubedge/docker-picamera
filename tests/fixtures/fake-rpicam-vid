@@ -34,8 +34,9 @@ def main() -> int:
         if limit is not None and n >= limit:
             continue
         n += 1
-        if codec == "yuv420":  # raw I420, no row padding
-            out.write(bytes([n % 256]) * (width * height + 2 * ((width + 1) // 2) * ((height + 1) // 2)))
+        if codec == "yuv420":  # raw I420, rows padded to 64 bytes as on a Pi
+            stride = -(-width // 64) * 64
+            out.write(bytes([n % 256]) * (stride * height + 2 * (stride // 2) * ((height + 1) // 2)))
             out.flush()
             continue
         if garbage:

@@ -178,7 +178,15 @@ pub async fn run_raw<E: JpegEncode>(
         }
     }
     slot.close();
-    let _ = worker.await;
+    match worker.await {
+        Ok(Err(e)) => return Err(e),
+        Err(e) => {
+            return Err(std::io::Error::other(format!(
+                "hardware encoder thread: {e}"
+            )));
+        }
+        Ok(Ok(())) => {}
+    }
     child.wait().await
 }
 
