@@ -139,6 +139,17 @@ impl Slot {
     }
 }
 
+/// Closes the slot when `run_raw` ends for any reason, including being aborted on
+/// shutdown, so the encoder thread returns instead of waiting for a frame forever (the
+/// runtime waits for blocking threads before the process can exit).
+struct CloseOnDrop(Arc<Slot>);
+
+impl Drop for CloseOnDrop {
+    fn drop(&mut self) {
+        self.0.close();
+    }
+}
+
 /// Hardware path: read raw frames of `frame_size` bytes from the child, encode each on
 /// `encoder` (a blocking thread), publish the JPEGs. Ends when the child's stdout closes
 /// (returns its exit status) or the encoder fails (returns the error).
@@ -152,6 +163,7 @@ pub async fn run_raw<E: JpegEncode>(
     let mut stdout = child.stdout.take().expect("stdout is piped");
     let slot = Arc::new(Slot::default());
     let worker_slot = Arc::clone(&slot);
+    let _close = CloseOnDrop(Arc::clone(&slot));
     let mut worker = tokio::task::spawn_blocking(move || -> std::io::Result<()> {
         while let Some(raw) = worker_slot.take() {
             let jpeg = encoder.encode(&raw)?;
@@ -194,6 +206,7 @@ pub async fn run_raw<E: JpegEncode>(
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::time::Duration;
 
     fn config(pairs: &[(&str, &str)]) -> Config {
         let mut env: HashMap<String, String> = pairs
@@ -303,6 +316,44 @@ mod tests {
         let latest = rx.borrow().as_ref().map(|(f, _)| f.to_vec()).unwrap();
         assert_eq!(&latest[1..], &[b'a', 6]);
         assert!(latest[0] >= 1, "at least one frame encoded");
+    }
+
+    struct DropFlag(Arc<std::sync::atomic::AtomicBool>);
+
+    impl JpegEncode for DropFlag {
+        fn encode(&mut self, _raw: &[u8]) -> std::io::Result<Bytes> {
+            Ok(Bytes::new())
+        }
+    }
+
+    impl Drop for DropFlag {
+        fn drop(&mut self) {
+            self.0.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn aborting_the_run_releases_the_encoder_thread() {
+        let dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let silent = Command::new("sleep")
+            .arg("30")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let (tx, _rx) = watch::channel(None);
+        let task = tokio::spawn(run_raw(silent, 4, DropFlag(Arc::clone(&dropped)), tx));
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        task.abort();
+        let _ = task.await;
+        for _ in 0..100 {
+            if dropped.load(std::sync::atomic::Ordering::SeqCst) {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        panic!("encoder thread still waiting after the run was aborted");
     }
 
     #[tokio::test(flavor = "current_thread")]
