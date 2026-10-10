@@ -17,19 +17,20 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  IMAGE: kubedge1/picamera
-
 jobs:
   hadolint:
-    name: hadolint
+    name: hadolint (${{ matrix.dockerfile }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: [Dockerfile, rust/Dockerfile]
     steps:
       - uses: actions/checkout@v7
       - uses: hadolint/hadolint-action@v3.5.0
         with:
-          dockerfile: Dockerfile
+          dockerfile: ${{ matrix.dockerfile }}
 
   chart:
     name: chart (helm lint + render tests)
@@ -40,7 +41,9 @@ jobs:
       - uses: azure/setup-helm@v5
         with:
           version: v4.3.0
-      - run: helm lint charts/picamera --set auth.existingSecret=lint
+      - run: |
+          helm lint charts/picamera --set auth.existingSecret=lint
+          helm lint charts/picamera-rs --set auth.existingSecret=lint
       # Same uv pin as ci.yml; see the note there before bumping.
       - uses: astral-sh/setup-uv@v7
       - name: render tests
@@ -48,12 +51,20 @@ jobs:
           REQUIRE_HELM: "1"
         run: |
           uv sync --locked
-          uv run pytest tests/test_chart.py
+          uv run pytest tests/test_chart.py tests/test_chart_rs.py
 
   build:
-    name: build (linux/arm64)
+    name: build ${{ matrix.image }} (linux/arm64)
     needs: hadolint
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: kubedge1/picamera
+            dockerfile: Dockerfile
+          - image: kubedge1/picamera-rs
+            dockerfile: rust/Dockerfile
     # The runtime stage's apt install runs under QEMU; the wheel stage runs natively.
     timeout-minutes: 45
     steps:
@@ -75,8 +86,9 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           platforms: linux/arm64
           push: false
-          tags: ${{ env.IMAGE }}:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

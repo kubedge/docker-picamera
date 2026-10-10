@@ -22,9 +22,7 @@ The Python streamer, once on `picamera2`, carries numpy, PyAV, Pillow and the Py
 - `rust-helm-deployment`: the `charts/picamera-rs` Helm chart.
 
 ### Modified Capabilities
-<!-- none in openspec/specs/ yet. This change builds on capabilities introduced by
-     modernize-python-and-docker (camera-streaming, container-image, helm-deployment),
-     which must be archived first; their requirements are referenced, not changed. -->
+- `camera-streaming`: "Listening address" gains an optional `PORT` (default 8000), so the shared conformance suite can run each implementation on a free port.
 
 ## Impact
 

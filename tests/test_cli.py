@@ -9,7 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 import pytest
-from conftest import credentials, fake_jpeg
+from httphelp import credentials, fake_jpeg
 
 from docker_picamera import cli
 from docker_picamera.config import Config

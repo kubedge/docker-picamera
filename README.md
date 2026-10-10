@@ -38,6 +38,11 @@ annotations: `kubedge.io/stream-url` (the in-cluster stream address, always set)
 That is the link the dashboard shows; without it, the camera is listed with no link.
 `--set dashboard.discoverable=false` removes all three.
 
+A Rust implementation with the same contract and much less memory is
+`kubedge1/picamera-rs`: `./run.sh kubedge1/picamera-rs` on a Pi, or `charts/picamera-rs`
+(same values) on Kubernetes — see [`charts/picamera-rs/README.md`](charts/picamera-rs/README.md).
+Only one of the two can own a node's camera at a time.
+
 The unauthenticated example from the original picamera recipe (fixed 640×480, no
 credentials) is in the same image:
 
@@ -56,6 +61,7 @@ Off a Pi, `uv run docker-picamera` validates its configuration and then exits wi
 | `FRAMERATE` | frames per second | `24` | no |
 | `ROTATE` | `0` or `180` (libcamera cannot rotate by 90/270) | `0` | no |
 | `HFLIP`, `VFLIP` | `true` / `false` | `false` | no |
+| `PORT` | TCP port to listen on | `8000` | no |
 
 Routes: `/` → `/index.html` (page), `/stream.mjpg` (stream), both authenticated;
 `/healthz` is open and returns `200` while frames are less than 5 s old, `503` otherwise.
@@ -65,7 +71,7 @@ This project keeps no data tree; it writes nothing outside the repository.
 
 ## Development
 
-    make check                    # all of the below except the image build
+    make check                    # rust + all of the below except the image builds
     uv run pytest
     uv run ruff check . && uv run ruff format --check .
     uv run mypy src
@@ -83,8 +89,8 @@ request and push to `main`. CI never logs in to a registry and holds no secrets.
 Images are pushed by hand, as for every `kubedge1/*` image:
 
     docker login                  # once; an account with push rights to kubedge1
-    make push                     # make check (lint, mypy, tests, helm lint), then
-                                  # pushes kubedge1/picamera:latest and :<version>
+    make push                     # make check, then kubedge1/picamera:latest and :<version>
+    make push-rs                  # make check, then kubedge1/picamera-rs:latest and :<version>
 
 The version is `__version__` in `src/docker_picamera/__init__.py`; keep the chart's
 `appVersion` equal to it.
