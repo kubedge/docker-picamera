@@ -103,3 +103,15 @@ def test_both_charts_coexist_without_name_collisions() -> None:
         python["Service"]["spec"]["ports"][0]["nodePort"]
         != (rust["Service"]["spec"]["ports"][0]["nodePort"])
     )
+
+
+def test_encoder_settings_only_when_set() -> None:
+    names = {e["name"] for e in container(docs("picamera-rs"))["env"]}
+    assert not {"ENCODER", "JPEG_QUALITY"} & names
+    env = {
+        e["name"]: e.get("value")
+        for e in container(docs("picamera-rs", "camera.encoder=auto", "camera.jpegQuality=85"))[
+            "env"
+        ]
+    }
+    assert (env["ENCODER"], env["JPEG_QUALITY"]) == ("auto", "85")

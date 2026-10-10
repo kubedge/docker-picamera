@@ -70,7 +70,8 @@ Raspberry Pi's `rpicam-vid` instead of picamera2. The executable is overridable 
 | --- | --- |
 | `config.rs` | same variables, defaults and error messages as `config.py` (identical text, checked by the conformance suite) |
 | `mjpeg.rs` | structural JPEG splitter: walks marker segments to SOS, scans entropy data honouring `FF 00` stuffing and `FF D0–D7` restarts; emits only complete SOI..EOI frames; bounded buffer (max(1 MiB, 4× largest frame)) |
-| `camera.rs` | spawns `rpicam-vid -t 0 -n --codec mjpeg … -o -` (`kill_on_drop`), forwards its stderr to the log, publishes each frame into a `watch` channel; returns the child's exit status |
+| `camera.rs` | spawns `rpicam-vid -t 0 -n --codec mjpeg|yuv420 … -o -` (`kill_on_drop`), forwards its stderr to the log, publishes each frame into a `watch` channel; returns the child's exit status. Two frame sources behind one seam: software (`--codec mjpeg` → splitter, the default) and hardware (`--codec yuv420` raw I420 → `hwjpeg` on a blocking thread, newest frame wins) |
+| `hwjpeg.rs` | the Pi's V4L2 M2M JPEG encoder, found by name (`bcm2835-codec-encode_image`) under `/sys/class/video4linux`; multi-planar MMAP, one buffer per queue, hand-declared ioctls over `libc` (struct sizes checked at compile time); Linux only |
 | `server.rs` / `auth.rs` | axum fallback router reproducing `server.py` routes, headers and bodies; constant-time Basic auth; the stream is an `unfold` over the `watch` receiver |
 | `main.rs` | current-thread tokio runtime; `--example`, `--healthcheck`; SIGTERM/SIGINT or camera exit → stop the child, end the streams, stop the server |
 

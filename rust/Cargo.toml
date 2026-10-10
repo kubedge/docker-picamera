@@ -1,6 +1,6 @@
 [package]
 name = "picamera-rs"
-version = "0.3.0"
+version = "0.4.1"
 edition = "2024"
 description = "Memory-lean Rust implementation of the docker-picamera MJPEG stream (camera-streaming contract)."
 license = "Apache-2.0"
@@ -11,6 +11,7 @@ axum = { version = "0.8.9", default-features = false, features = ["http1", "toki
 base64 = "0.23.1"
 bytes = "1.12.1"
 futures-util = "0.3.34"
+libc = "0.2.190"
 subtle = "2.6.1"
 tokio = { version = "1.53.2", features = ["rt", "macros", "net", "process", "io-util", "signal", "sync", "time"] }
 tracing = "0.1.44"

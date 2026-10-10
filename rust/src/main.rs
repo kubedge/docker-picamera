@@ -7,6 +7,7 @@
 mod auth;
 mod camera;
 mod config;
+mod hwjpeg;
 mod mjpeg;
 mod server;
 
@@ -19,6 +20,9 @@ use std::time::Duration;
 
 use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::watch;
+
+use camera::Codec;
+use config::EncoderChoice;
 
 const EXIT_CONFIG_ERROR: u8 = 2;
 const EXIT_RUNTIME_ERROR: u8 = 1;
@@ -80,7 +84,44 @@ async fn run(config: config::Config, example: bool) -> ExitCode {
         expected_auth,
     });
 
-    let child = match camera::spawn(&config) {
+    // Resolve ENCODER before starting the camera: `hardware` without an encoder is a
+    // startup error, `auto` without one falls back to software.
+    let device = hwjpeg::probe(&hwjpeg::sysfs_dir());
+    let encoder = match (config.encoder, &device) {
+        (EncoderChoice::Software, _) => None,
+        (EncoderChoice::Auto, None) => {
+            tracing::info!("hardware JPEG encoder not found; using software");
+            None
+        }
+        (EncoderChoice::Hardware, None) => {
+            eprintln!(
+                "error: camera: hardware JPEG encoder not found (no {} under {})",
+                hwjpeg::ENCODER_NAME,
+                hwjpeg::sysfs_dir().display()
+            );
+            return ExitCode::from(EXIT_RUNTIME_ERROR);
+        }
+        (EncoderChoice::Hardware | EncoderChoice::Auto, Some(path)) => {
+            match hwjpeg::HwJpeg::open(path, config.width, config.height, config.jpeg_quality) {
+                Ok(session) => Some((session, path.clone())),
+                Err(e) if config.encoder == EncoderChoice::Auto => {
+                    tracing::info!("hardware JPEG encoder unusable ({e}); using software");
+                    None
+                }
+                Err(e) => {
+                    eprintln!("error: camera: hardware JPEG encoder: {e}");
+                    return ExitCode::from(EXIT_RUNTIME_ERROR);
+                }
+            }
+        }
+    };
+    let codec = if encoder.is_some() {
+        Codec::Hardware
+    } else {
+        Codec::Software
+    };
+
+    let child = match camera::spawn(&config, codec) {
         Ok(child) => child,
         Err(e) => {
             eprintln!("error: camera: cannot start {}: {e}", camera::executable());
@@ -88,13 +129,17 @@ async fn run(config: config::Config, example: bool) -> ExitCode {
         }
     };
     tracing::info!(
-        "camera {}x{}@{} hflip={} vflip={} rotation={} via {}",
+        "camera {}x{}@{} hflip={} vflip={} rotation={} encoder={} via {}",
         config.width,
         config.height,
         config.framerate,
         config.hflip,
         config.vflip,
         config.rotation,
+        match &encoder {
+            None => "software".to_string(),
+            Some((_, path)) => format!("hardware({})", path.display()),
+        },
         camera::executable()
     );
 
@@ -119,7 +164,13 @@ async fn run(config: config::Config, example: bool) -> ExitCode {
 
     let mut sigterm = signal(SignalKind::terminate()).expect("SIGTERM handler");
     let mut sigint = signal(SignalKind::interrupt()).expect("SIGINT handler");
-    let mut camera = tokio::spawn(camera::run(child, tx));
+    let mut camera = match encoder {
+        None => tokio::spawn(camera::run(child, tx)),
+        Some((session, _)) => {
+            let frame_size = hwjpeg::i420_frame_size(config.width, config.height);
+            tokio::spawn(camera::run_raw(child, frame_size, session, tx))
+        }
+    };
 
     let code = tokio::select! {
         _ = sigterm.recv() => { tracing::info!("received SIGTERM, shutting down"); None }
@@ -127,7 +178,7 @@ async fn run(config: config::Config, example: bool) -> ExitCode {
         ended = &mut camera => {
             match ended {
                 Ok(Ok(status)) => tracing::error!("camera process exited: {status}"),
-                Ok(Err(e)) => tracing::error!("camera process read failed: {e}"),
+                Ok(Err(e)) => tracing::error!("camera pipeline failed: {e}"),
                 Err(e) => tracing::error!("camera task failed: {e}"),
             }
             Some(ExitCode::from(EXIT_RUNTIME_ERROR))

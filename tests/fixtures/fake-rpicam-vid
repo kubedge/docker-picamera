@@ -19,6 +19,9 @@ def main() -> int:
     if path := os.environ.get("FAKECAM_PID_FILE"):
         Path(path).write_text(str(os.getpid()))
     fps = int(argv[argv.index("--framerate") + 1]) if "--framerate" in argv else 30
+    codec = argv[argv.index("--codec") + 1] if "--codec" in argv else "mjpeg"
+    width = int(argv[argv.index("--width") + 1]) if "--width" in argv else 640
+    height = int(argv[argv.index("--height") + 1]) if "--height" in argv else 480
     limit, exit_after = frame_limit(), os.environ.get("FAKECAM_EXIT_AFTER")
     garbage = os.environ.get("FAKECAM_GARBAGE") == "1"
     out = sys.stdout.buffer
@@ -31,6 +34,10 @@ def main() -> int:
         if limit is not None and n >= limit:
             continue
         n += 1
+        if codec == "yuv420":  # raw I420, no row padding
+            out.write(bytes([n % 256]) * (width * height + 2 * ((width + 1) // 2) * ((height + 1) // 2)))
+            out.flush()
+            continue
         if garbage:
             out.write(b"\x00garbage\xff\x00")
         out.write(jpeg(n))

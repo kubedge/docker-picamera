@@ -33,6 +33,9 @@ SCRUBBED = (
     "VFLIP",
     "PORT",
     "RPICAM_VID",
+    "ENCODER",
+    "JPEG_QUALITY",
+    "PICAMERA_V4L2_SYSFS",
 )
 
 
