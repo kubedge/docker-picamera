@@ -59,6 +59,19 @@ Opt-in: deployments change nothing until they set `ENCODER`. Recommended rollout
 - **Encoder error at camera EOF** is now returned, not swallowed (surfaced by a Linux test run during the stride fix).
 - **`auto` falls back also when the encoder is present but cannot be opened**, logged as `hardware JPEG encoder unusable (…)`; `hardware` exits 1 in both cases.
 
+## Measurements (task 5.2, kube-node02, 800x600@24, JPEG_QUALITY=50, 2 clients 600 s)
+
+| | software (0.4.2) | hardware (0.4.2) | auto → hardware (0.4.2) |
+| --- | --- | --- | --- |
+| frames in 5 s | 130 | 130 | 130 |
+| bytes / frame | 10.2 KB | 10.9 KB | 11.9 KB |
+| CPU, % of one core | 52.0 | 49.4 | 49.5 |
+| memory.peak | 7.0 MiB | 9.4 MiB | 8.8 MiB |
+
+`rpicam-vid` (capture + ISP) dominates CPU, so the hardware encoder saves ~3 points and costs ~2 MiB plus a repack copy. 0.4.2 hung on SIGTERM in hardware/auto; 0.4.3 exits 0 (hardware 2.8 s, auto 0.5 s; peak 8.5/8.6 MiB, CPU 47.9/47.8 %).
+
+**Decision:** the chart default stays `software`; `hardware`/`auto` remain opt-in.
+
 ## Open Questions
 
-- Whether `auto` should become the default once measured — a later, separate decision.
+- None open. `auto` as default: declined on the numbers above.
