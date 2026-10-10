@@ -5,4 +5,6 @@
 !README.md
 !src/
 !docker/raspberrypi-archive-keyring.pgp
+!rust/
+rust/target
 **/__pycache__

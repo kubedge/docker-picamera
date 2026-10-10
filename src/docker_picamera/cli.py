@@ -12,7 +12,7 @@ from contextlib import AbstractContextManager
 from types import FrameType
 
 from docker_picamera.camera import CameraUnavailable, open_camera
-from docker_picamera.config import EXAMPLE_CONFIG, Config, ConfigError, load_config
+from docker_picamera.config import EXAMPLE_CONFIG, Config, ConfigError, load_config, load_port
 from docker_picamera.frames import FrameBuffer
 from docker_picamera.server import (
     Site,
@@ -35,11 +35,13 @@ def main() -> int:
     _setup_logging()
     try:
         config = load_config(os.environ)
+        port = load_port(os.environ)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
     return serve(
         config,
+        port=port,
         title="picamera MJPEG streaming demo",
         heading="PiCamera MJPEG Streaming Demo",
         auth=basic_auth_header(config.username, config.password),
@@ -48,13 +50,19 @@ def main() -> int:
 
 def example_main() -> int:
     _setup_logging()
+    try:
+        port = load_port(os.environ)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_CONFIG_ERROR
     title = "Raspberry Pi - Surveillance Camera"
-    return serve(EXAMPLE_CONFIG, title=title, heading=title, auth=None)
+    return serve(EXAMPLE_CONFIG, port=port, title=title, heading=title, auth=None)
 
 
 def serve(
     config: Config,
     *,
+    port: int | None = None,
     title: str,
     heading: str,
     auth: bytes | None,
@@ -69,7 +77,9 @@ def serve(
     )
     try:
         with (camera or open_camera)(config, frames):
-            server = StreamingServer(("", LISTEN_PORT), build_handler(site))
+            server = StreamingServer(
+                ("", LISTEN_PORT if port is None else port), build_handler(site)
+            )
             previous = _install_shutdown_handlers(server)
             LOG.info("serving on port %d", server.server_address[1])
             try:

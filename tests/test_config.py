@@ -1,6 +1,6 @@
 import pytest
 
-from docker_picamera.config import Config, ConfigError, load_config
+from docker_picamera.config import Config, ConfigError, load_config, load_port
 
 PASSWORD = {"AUTH_PASSWORD": "s3cret"}
 
@@ -72,3 +72,14 @@ def test_only_0_and_180_rotation(value: str) -> None:
 def test_flip_must_be_true_or_false(name: str) -> None:
     with pytest.raises(ConfigError, match=rf"^{name}: expected true or false, got 'yes'"):
         load_config({**PASSWORD, name: "yes"})
+
+
+def test_port_defaults_to_8000_and_accepts_overrides() -> None:
+    assert load_port({}) == 8000
+    assert load_port({"PORT": "9000"}) == 9000
+
+
+@pytest.mark.parametrize("value", ["0", "65536", "abc", "-1", ""])
+def test_port_must_be_1_to_65535(value: str) -> None:
+    with pytest.raises(ConfigError, match=r"^PORT: expected a port number 1-65535"):
+        load_port({"PORT": value})

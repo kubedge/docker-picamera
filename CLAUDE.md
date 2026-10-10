@@ -11,11 +11,12 @@ Per-model advice, when the model changes: [`docs/MODEL-ADVICE.md`](docs/MODEL-AD
 
 ## 1. What this project is
 
-An authenticated MJPEG stream of a Raspberry Pi camera, shipped as the arm64 image
-`kubedge1/picamera` and the Helm chart `charts/picamera` for Kubernetes camera nodes. It
+An authenticated MJPEG stream of a Raspberry Pi camera, in two implementations of one contract —
+Python (`kubedge1/picamera`, `charts/picamera`) and memory-lean Rust (`kubedge1/picamera-rs`,
+`charts/picamera-rs`) — as arm64 images and Helm charts for Kubernetes camera nodes. It
 streams and reports health; it does not record, transcode, or serve more than one camera.
 
-- **Stack:** python · **Run:** `AUTH_PASSWORD=… ./run.sh` on a Pi; `uv run pytest` anywhere ·
+- **Stack:** python · rust (`rust/`) · **Run:** `AUTH_PASSWORD=… ./run.sh` on a Pi; `uv run pytest` anywhere ·
   **Layout and invariants:** `architecture.md` — read it before adding a module, a stage, or a
   dependency between packages; do not re-derive it from the tree, and do not summarise it here.
 
@@ -36,8 +37,9 @@ None yet. Every command is in `README.md` § Run and § Development.
 
 ## 4. What this project produces for others
 
-The image `kubedge1/picamera` (Docker Hub, `linux/arm64`), pushed by hand with
-`make push` (CI only builds it), and the chart `charts/picamera`.
+The images `kubedge1/picamera` and `kubedge1/picamera-rs` (Docker Hub, `linux/arm64`), pushed
+by hand with `make push` / `make push-rs` (CI only builds them), and the charts
+`charts/picamera` and `charts/picamera-rs`.
 Their contract is `openspec/specs/` (`camera-streaming`, `container-image`, `helm-deployment`).
 
 ## 5. What this project reads

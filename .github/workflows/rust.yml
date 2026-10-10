@@ -1,0 +1,52 @@
+name: Rust
+
+# Project-owned (ci.yml is delivered by claude-meta). Formats, lints and tests the Rust
+# service, then runs the shared conformance suite against BOTH implementations with
+# REQUIRE_RUST=1, so the Rust cases can never silently skip.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: rust (fmt, clippy, test, conformance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # rustup on the runner reads rust/rust-toolchain.toml (1.99 + rustfmt, clippy).
+      - name: toolchain
+        working-directory: rust
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: fmt
+        working-directory: rust
+        run: cargo fmt --check
+      - name: clippy
+        working-directory: rust
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: unit tests
+        working-directory: rust
+        run: cargo test --locked
+      - name: build
+        working-directory: rust
+        run: cargo build --locked
+      # Same uv pin as ci.yml; see the note there before bumping.
+      - uses: astral-sh/setup-uv@v7
+      - name: conformance (python + rust) and RSS guard
+        env:
+          REQUIRE_RUST: "1"
+          # Peak RSS of the Rust binary alone with the fake camera; from the first CI
+          # measurement plus headroom. Raise only with a reason in the commit.
+          RSS_GUARD_KIB: "12288"
+        run: |
+          uv sync --locked
+          uv run pytest -s tests/conformance

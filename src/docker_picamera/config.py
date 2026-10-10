@@ -75,6 +75,17 @@ def load_config(environ: Mapping[str, str]) -> Config:
     )
 
 
+DEFAULT_PORT = 8000
+
+
+def load_port(environ: Mapping[str, str]) -> int:
+    """`PORT`, default 8000: the TCP port the service listens on."""
+    raw = environ.get("PORT", str(DEFAULT_PORT))
+    if not _DIGITS.match(raw) or not 1 <= int(raw) <= 65535:
+        raise ConfigError(f"PORT: expected a port number 1-65535, got {raw!r}")
+    return int(raw)
+
+
 def _positive_int(environ: Mapping[str, str], name: str, default: str) -> int:
     raw = environ.get(name, default)
     if not _DIGITS.match(raw) or int(raw) == 0:

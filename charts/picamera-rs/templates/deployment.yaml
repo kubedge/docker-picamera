@@ -1,0 +1,110 @@
+{{/*
+Copyright 2018 Kubedge.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "picamera.fullname" . }}
+  labels:
+    {{- include "picamera.labels" . | nindent 4 }}
+spec:
+  # A camera has one owner: one replica, and the old pod releases it before the new starts.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "picamera.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "picamera.selectorLabels" . | nindent 8 }}
+        {{- if .Values.dashboard.discoverable }}
+        # Pod template only: the Deployment selector is immutable.
+        kubedge.device.name: camera
+        {{- end }}
+      {{- if .Values.dashboard.discoverable }}
+      annotations:
+        kubedge.io/stream-url: {{ include "picamera.streamUrl" . | quote }}
+        {{- with .Values.dashboard.externalUrl }}
+        kubedge.io/external-url: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+    spec:
+      containers:
+        - name: picamera
+          image: {{ include "picamera.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            # Kubernetes grants host device nodes only to privileged containers; the
+            # process still runs as the image's non-root user.
+            privileged: true
+          env:
+            - name: AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "picamera.authSecret" . }}
+                  key: username
+            - name: AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "picamera.authSecret" . }}
+                  key: password
+            - name: RESOLUTION
+              value: {{ .Values.camera.resolution | quote }}
+            - name: FRAMERATE
+              value: {{ .Values.camera.framerate | quote }}
+            - name: ROTATE
+              value: {{ .Values.camera.rotate | quote }}
+            - name: HFLIP
+              value: {{ .Values.camera.hflip | quote }}
+            - name: VFLIP
+              value: {{ .Values.camera.vflip | quote }}
+          ports:
+            - name: http
+              containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 5
+          volumeMounts:
+            - name: dev
+              mountPath: /dev
+            - name: udev
+              mountPath: /run/udev
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        # libcamera enumerates media, video, sub-device and DMA-heap nodes, whose
+        # numbering differs per Pi, and reads udev's device database.
+        - name: dev
+          hostPath:
+            path: /dev
+        - name: udev
+          hostPath:
+            path: /run/udev

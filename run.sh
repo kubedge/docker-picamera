@@ -3,7 +3,10 @@
 # AUTH_PASSWORD must be set in the caller's environment; it is passed through by name,
 # so the value never appears on a command line. AUTH_USERNAME, RESOLUTION, FRAMERATE,
 # ROTATE, HFLIP and VFLIP are passed through the same way when set.
+# Usage: run.sh [image]  (default kubedge1/picamera; kubedge1/picamera-rs runs the same way)
 set -euo pipefail
+
+image="${1:-kubedge1/picamera}"
 
 if [[ -z "${AUTH_PASSWORD:-}" ]]; then
   echo "error: AUTH_PASSWORD must be set, e.g. AUTH_PASSWORD=... $0" >&2
@@ -30,10 +33,10 @@ if [[ ${#device_args[@]} -eq 0 ]]; then
   exit 1
 fi
 
-docker run -d --restart=always --name picamera \
+docker run -d --restart=always --name "$(basename "${image%%:*}")" \
   "${device_args[@]}" \
   -v /run/udev:/run/udev:ro \
   --group-add video \
   -p 8000:8000 \
   "${env_args[@]}" \
-  kubedge1/picamera
+  "$image"

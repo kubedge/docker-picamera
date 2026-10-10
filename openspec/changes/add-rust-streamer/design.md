@@ -73,6 +73,14 @@ On device: run each image for 10 minutes at 800×600@24 with two `curl` stream c
 2. Push by hand with an account that can push `kubedge1/picamera-rs` (create the repository if the org disallows create-on-push).
 3. Per node: `helm uninstall picamera` then `helm install picamera-rs charts/picamera-rs -f <same values>`; rollback is the reverse — same Secret, same values.
 
+## Implementation notes (2026-10-09)
+
+- **Baseline measured.** The Python image on kube-node02 (Pi 3, OV5647, 640x480@15, two stream clients briefly) peaked at **33.2 MiB** cgroup `memory.peak` (58.7 MiB RSS incl. shared pages). Budget for the Rust container: **≤ 16.6 MiB**, to be re-measured at the reference load with `rust/scripts/measure-memory.sh`.
+- **Child stop is SIGKILL**, via `kill_on_drop` when the camera task is aborted, not SIGTERM. Same observable contract (the child is gone before exit 0, tested); no extra signal dependency.
+- **`PORT`** (default 8000) added to both implementations so the conformance suite runs each case on a free port; recorded as a MODIFIED `camera-streaming` requirement in this change.
+- **Python side runs as a subprocess too**, with a stand-in `picamera2`/`libcamera` on `PYTHONPATH` (`tests/fixtures/fakecam`), so both implementations are tested through the same black-box path; the old in-process `tests/test_server.py` is gone.
+- **Coexistence** is checked by rendering (`tests/test_chart_rs.py`: distinct names, selectors, node ports) rather than `helm install --dry-run`, which needs a cluster.
+
 ## Open Questions
 
 - Final default memory request/limit for `charts/picamera-rs` — filled from the first on-device measurement; does not change specs or tasks.
