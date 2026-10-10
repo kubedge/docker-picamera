@@ -81,6 +81,20 @@ On device: run each image for 10 minutes at 800×600@24 with two `curl` stream c
 - **Python side runs as a subprocess too**, with a stand-in `picamera2`/`libcamera` on `PYTHONPATH` (`tests/fixtures/fakecam`), so both implementations are tested through the same black-box path; the old in-process `tests/test_server.py` is gone.
 - **Coexistence** is checked by rendering (`tests/test_chart_rs.py`: distinct names, selectors, node ports) rather than `helm install --dry-run`, which needs a cluster.
 
+## On-device results (kube-node02, Pi 3, OV5647, Ubuntu 24.04, containerd; 2026-10-09)
+
+Measured by picluster-automation (ansible/ctr-smoke.yml, camera-dashboard-joint.yml @ 4f8bb3e), images 0.3.0:
+
+| | Python | Rust |
+| --- | --- | --- |
+| memory.peak, reference load (800x600@24, 2 clients, 600 s) | 33.3 MiB | **7.0 MiB (21%)** — budget passes |
+| memory.peak, 640x480@15 runs | 56.3 / 67.5 MiB | 9.5 / 6.8 MiB |
+| RSS, all processes | 58.3–58.7 MiB | 21.9–22.1 MiB (picamera-rs 2.4 + rpicam-vid 19) |
+| CPU, reference load / 640x480@15 | 42.9% / 21.3–21.5% | 51.5% / 24.5–24.7% |
+| frames in 5 s at 640x480@15, bytes | 82, 1.45–1.57 MB | 77–81, 0.52–0.54 MB |
+
+All contract checks, SIGTERM and the joint test with kubedge-dashboard v0.4.0 pass for both. Chart default resources set from these: request 10Mi, limit 16Mi. Rust's higher CPU and smaller frames come from `rpicam-vid`'s software JPEG at quality 50 — follow-up change `add-rust-hw-jpeg`. `/healthz` is 503 until the first frame on both (Rust binds before rpicam-vid delivers; probes retry).
+
 ## Open Questions
 
 - Final default memory request/limit for `charts/picamera-rs` — filled from the first on-device measurement; does not change specs or tasks.

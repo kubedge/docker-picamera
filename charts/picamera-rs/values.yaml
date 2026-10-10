@@ -67,10 +67,10 @@ dashboard:
   # Browser-reachable stream URL, e.g. http://<node>:30456/stream.mjpg. Empty: no link.
   externalUrl: ""
 
-# Sized for the Rust image (picamera-rs + rpicam-vid in one cgroup). Placeholder until the
-# on-device measurement: set to measured peak x 1.5 (openspec change add-rust-streamer).
+# Sized for the Rust image (picamera-rs + rpicam-vid in one cgroup). Measured on a Pi 3
+# (kube-node02, 2026-10-09): memory.peak 6.8-9.5 MiB; limit = highest peak x 1.5, rounded up.
 resources:
   requests:
-    memory: 32Mi
+    memory: 10Mi
   limits:
-    memory: 96Mi
+    memory: 16Mi

@@ -36,11 +36,19 @@ The service SHALL exit non-zero, naming the offending variable and value, when `
 - **THEN** startup fails with an error stating that only `0` and `180` are supported
 
 ### Requirement: Listening address
-The service SHALL accept HTTP connections on TCP port 8000 on all interfaces and serve concurrent clients.
+The service SHALL accept HTTP connections on all interfaces on the TCP port named by `PORT` (default `8000`) and serve concurrent clients. A `PORT` that is not an integer from 1 to 65535 SHALL be a startup error naming `PORT`.
 
 #### Scenario: Two clients at once
 - **WHEN** two authenticated clients open `/stream.mjpg` at the same time
 - **THEN** both receive frames
+
+#### Scenario: Port override
+- **WHEN** the service starts with `PORT=9000`
+- **THEN** it serves on port 9000
+
+#### Scenario: Bad port
+- **WHEN** the service starts with `PORT=0`
+- **THEN** it exits non-zero with an error naming `PORT`
 
 ### Requirement: Basic authentication
 Every route except `/healthz` SHALL require HTTP Basic credentials equal to `AUTH_USERNAME` / `AUTH_PASSWORD`. A missing or wrong `Authorization` header SHALL get `401` with `WWW-Authenticate: Basic realm="picamera"`. Credentials SHALL be compared in constant time.
