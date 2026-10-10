@@ -63,7 +63,10 @@ fn serve(config: config::Config, example: bool) -> ExitCode {
         .enable_all()
         .build()
         .expect("tokio runtime");
-    runtime.block_on(run(config, example))
+    let code = runtime.block_on(run(config, example));
+    // Never let a stuck blocking thread (an encoder ioctl) hold the exit past SIGTERM.
+    runtime.shutdown_timeout(Duration::from_secs(2));
+    code
 }
 
 async fn run(config: config::Config, example: bool) -> ExitCode {
