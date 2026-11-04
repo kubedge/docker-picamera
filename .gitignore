@@ -32,7 +32,6 @@ go.work
 .DS_Store
 .DS_Store
 
-# Python bytecode
 # Obsidian (per-vault state when the project is opened as a vault)
 .obsidian/
 .trash/
